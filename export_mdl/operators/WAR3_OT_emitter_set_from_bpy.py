@@ -6,8 +6,8 @@ import bpy
 
 class WAR3_OT_emitter_set_from_bpy(bpy.types.Operator):
     bl_idname = 'war_3.emitter_set_from_bpy'
-    bl_label = 'Warcraft 3 Set WC3 Particle Setting from Blender Particle Settings'
-    bl_description = 'Warcraft 3 Set WC3 Particle Setting from Blender Particle Settings'
+    bl_label = '按 Blender 粒子系统填充参数'
+    bl_description = '把 Blender 粒子系统里的发射数量、寿命、速度等换算成魔兽争霸3 的对应参数'
     bl_options = {'UNDO'}
 
     @classmethod

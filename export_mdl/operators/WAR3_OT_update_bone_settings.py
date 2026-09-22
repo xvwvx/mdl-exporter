@@ -6,8 +6,8 @@ from export_mdl.properties.War3NodeProperties import NODE_TYPE_COLORS
 
 class WAR3_OT_update_bone_settings(bpy.types.Operator):
     bl_idname = 'warcraft_3.update_bone_settings'
-    bl_label = 'Warcraft 3 Update Bone Settings'
-    bl_description = 'Warcraft 3 Update Bone Settings'
+    bl_label = '刷新骨骼节点类型'
+    bl_description = '按每根骨骼记录的节点类型，重建对应的骨骼集合（骨骼/辅助体/挂点/事件/碰撞体）'
     bl_options = {'UNDO'}
 
     def execute(self, context):

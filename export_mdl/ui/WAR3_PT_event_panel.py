@@ -5,9 +5,10 @@ from ..properties import War3EventProperties
 
 
 class WAR3_PT_event_panel(Panel):
-    """Displays event object properties in the Object panel"""
+    """事件物体：在动画播放到某一帧时让游戏触发效果（放音效、留脚印、生成单位、地面贴花）。
+物体名必须保持「类型+序号+事件ID」的形式，导出时靠这个名字识别。"""
     bl_idname = "WAR3_PT_event_panel"
-    bl_label = "Event Object"
+    bl_label = "事件物体"
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_context = 'object'
@@ -43,13 +44,13 @@ class WAR3_PT_event_panel(Panel):
         events = context.window_manager.events
 
         row = layout.row()
-        row.label(text="Event Type")
+        row.label(text="事件类型")
         op = row.operator("object.search_event_type", text="", icon='VIEWZOOM')
         row.prop(events, "event_type", text="")
 
         layout.separator()
 
         row = layout.row()
-        row.label(text="Event ID")
+        row.label(text="事件ID")
         op = row.operator("object.search_eventid", text="", icon='VIEWZOOM')
         row.prop(events, "event_id", text="")

@@ -36,15 +36,18 @@ NODE_TYPE_NONE = 'NONE'
 class War3NodeProperties(bpy.types.PropertyGroup):
     bpy_type = bpy.types.Bone
     nodeType: bpy.props.EnumProperty(
+        description="这个节点原本是哪种魔兽争霸3节点。导入时自动记录，"
+                    "导出时据此还原成 Bone / Helper / Attachment 等对应的块，"
+                    "所以一般不用手动改。",
         items=[
-            ('NONE', 'None', ''),
-            ('BONE', 'Bone', ''),
-            ('HELPER', 'Helper', ''),
-            ('ATTACHMENT', 'Attachment', ''),
-            ('EVENT', 'Event', ''),
-            ('COLLISION_SHAPE', 'Collision Shape', '')
+            ('NONE', '未标记', '不是魔兽争霸3节点，或由灯光/发射器另行处理'),
+            ('BONE', '骨骼', '参与蒙皮的骨骼'),
+            ('HELPER', '辅助体', '不参与蒙皮，只用来定位'),
+            ('ATTACHMENT', '挂点', '武器/特效的附着点'),
+            ('EVENT', '事件', '触发音效、脚印等'),
+            ('COLLISION_SHAPE', '碰撞体', '点击判定用的碰撞形状')
             ],
-        name='Node Type',
+        name='节点类型',
         update=set_bone_node_type,
         default='NONE'
         )

@@ -57,21 +57,25 @@ def prepare_action(context: bpy.types.Context, animation_name: str, anim_length)
 
 class War3ArmatureSequenceListItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(
-        name="Name",
+        name="序列名",
         default="new Sequence",
         update=set_animation_name
     )
     action_name: bpy.props.StringProperty(
-        name="ActionName",
+        name="动作名",
+        description="该序列对应的 Blender 动作（Action）名字。"
+                    "选中序列时会自动把这个动作挂到骨架上。",
     )
     length: bpy.props.IntProperty(
-        name="Length",
+        name="长度（帧）",
+        description="序列的帧数长度，导出时按这个长度截取动作。",
         min=0,
         default=150,
         update=set_animation
     )
     non_looping: bpy.props.BoolProperty(
-        name="NonLooping",
+        name="不循环",
+        description="开启后该动画只播放一次不重复。",
         default=False
     )
 

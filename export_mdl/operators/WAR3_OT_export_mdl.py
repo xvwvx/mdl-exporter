@@ -9,10 +9,11 @@ from ..classes.War3ExportSettings import War3ExportSettings
 
 @orientation_helper(axis_forward='Y', axis_up='Z')
 class WAR3_OT_export_mdl(Operator, ExportHelper):
-    """MDL Exporter"""
+    """导出为魔兽争霸3 的 .mdl 文本模型。
+贴图路径按魔兽争霸根目录的相对路径写出；模型建议按单位尺寸制作、Z 轴朝上。"""
     bl_idname = 'export.mdl_exporter'
-    bl_description = 'Warctaft 3 MDL Exporter'
-    bl_label = 'Export .MDL'
+    bl_description = '魔兽争霸3 MDL 导出器'
+    bl_label = '导出 .MDL'
     filename_ext = ".mdl"
 
     filter_glob: StringProperty(
@@ -24,41 +25,45 @@ class WAR3_OT_export_mdl(Operator, ExportHelper):
             )
 
     use_selection: BoolProperty(
-            name="Selected Objects",
-            description="Export only selected objects on visible layers",
+            name="仅导出选中物体",
+            description="只导出当前选中且在可见集合里的物体；不勾选则导出整个场景",
             default=False,
             )
 
     global_scale: FloatProperty(
-            name="Scale",
+            name="缩放",
             min=0.01,
             max=1000.0,
             default=1,
             )
 
     optimize_animation: BoolProperty(
-            name="Optimize Keyframes",
-            description="Remove keyframes if the resulting motion deviates less than the tolerance value."
+            name="优化关键帧",
+            description="删掉多余关键帧：如果去掉后动作偏差仍小于下面的容差就删掉它，"
+                        "可以显著减小文件体积"
             )
 
     demote_to_helper: BoolProperty(
-            name="Demote Bones To Helpers",
-            description="Save bones not used for mesh as helpers.",
+            name="未使用的骨骼转为辅助体",
+            description="没有任何网格蒙皮到它上面的骨骼，导出成辅助体（Helper）而不是骨骼，"
+                        "可以减少骨骼数量。从文件导入的模型会记录原始类型，不受此项影响",
             default=True
             )
 
     use_actions: BoolProperty(
-            name="Use Actions",
-            description="Use actions instead of mdl-sequences"
+            name="使用 Blender 动作",
+            description="用 Blender 的动作（Action）作为动画序列，而不是用时间轴标记。"
+                        "实验性功能，暂不支持稀有度与不循环"
             )
 
     use_skinweights: BoolProperty(
-            name="Use SkinWeights",
-            description="Use skin weights instead of vertex groups"
+            name="使用蒙皮权重",
+            description="按蒙皮权重导出（每个顶点最多 4 根骨骼），而不是只写顶点组。"
+                        "需要魔兽争霸3 1.32+ 或重制版才支持"
             )
 
     optimize_tolerance: FloatProperty(
-            name="Tolerance",
+            name="容差",
             min=0.001,
             soft_max=0.1,
             default=0.05,
@@ -103,15 +108,15 @@ class WAR3_OT_export_mdl(Operator, ExportHelper):
         layout.prop(self, 'use_skinweights')
         if self.optimize_animation:
             box = layout.box()
-            box.label(text="EXPERIMENTAL", icon='ERROR')
+            box.label(text="实验性功能", icon='ERROR')
             layout.prop(self, 'optimize_tolerance')
         if self.use_actions:
             box = layout.box()
-            box.label(text="EXPERIMENTAL", icon='ERROR')
-            box.label(text="Will export action and not marker based sequences. "
-                           "This does not yet support Rarity or NonLooping")
+            box.label(text="实验性功能", icon='ERROR')
+            box.label(text="将按 Blender 动作导出，而不是按时间轴标记。"
+                           "暂不支持稀有度与不循环")
         if self.use_skinweights:
             box = layout.box()
-            box.label(text="EXPERIMENTAL", icon='ERROR')
-            box.label(text="Will export with skin weights and leave vertex groups empty.")
+            box.label(text="实验性功能", icon='ERROR')
+            box.label(text="将按蒙皮权重导出，顶点组会留空。")
             # layout.prop(self, 'use_actions')

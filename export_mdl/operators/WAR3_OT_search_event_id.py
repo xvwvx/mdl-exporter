@@ -14,12 +14,12 @@ def event_items(self, context):
 class WAR3_OT_search_event_id(Operator):
     """Search list of Warcraft 3 internal events"""
     bl_idname = "object.search_eventid"
-    bl_label = "Search"
+    bl_label = "查找"
     bl_options = {'REGISTER', 'INTERNAL'}
     bl_property = "ids"
 
     ids: EnumProperty(
-                name="Event ID",
+                name="事件ID",
                 items=event_items,
             )
 

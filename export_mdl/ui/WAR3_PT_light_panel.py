@@ -6,9 +6,10 @@ from ..properties import War3LightSettings
 
 
 class WAR3_PT_light_panel(Panel):
-    """Displays light properties in the lamp panel"""
+    """魔兽争霸3 灯光参数。导出时会写成 Light 块；
+衰减范围决定光照到多远，环境光让阴影里也有亮度。"""
     bl_idname = "WAR3_PT_light_panel"
-    bl_label = "MDL Light Settings"
+    bl_label = "MDL 灯光设置"
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_context = 'data'

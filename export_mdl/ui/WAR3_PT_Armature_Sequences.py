@@ -2,9 +2,11 @@ import bpy
 
 
 class WAR3_PT_Armature_Sequences(bpy.types.Panel):
-    """Add a Warcraft 3 animation sequence using actions"""
+    """用 Blender 动作（Action）来管理魔兽争霸3的动画序列。
+每个序列对应导出文件里的一段 Sequence；序列名就是导出的动作名，
+起始/结束帧由时间轴上的同名标记决定。"""
     bl_idname = 'WAR3_PT_Armature_Sequences'
-    bl_label = 'WarCraft 3 Actions'
+    bl_label = '魔兽争霸3 动作序列'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'data'
@@ -16,7 +18,7 @@ class WAR3_PT_Armature_Sequences(bpy.types.Panel):
     def draw(self, context: bpy.types.Context):
         war3_data = context.armature.war_3
         layout = self.layout
-        layout.label(text="Animations:")
+        layout.label(text="动画序列：")
         row = layout.row()
         row.template_list(
             listtype_name='WAR3_UL_sequence_list',

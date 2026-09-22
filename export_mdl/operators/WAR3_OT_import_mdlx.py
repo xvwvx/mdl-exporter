@@ -14,21 +14,33 @@ def set_team_color_property(operator, something):
 
 
 class WAR3_OT_import_mdlx(bpy.types.Operator, io_utils.ImportHelper):
-    """MDL Importer"""
+    """导入魔兽争霸3 的 .mdl / .mdx 模型：骨骼、动画序列、材质图层、"""
+    """粒子发射器、飘带、相机、挂点与碰撞体都会一并导入。"""
     bl_idname = 'import.mdl_exporter'
     # bl_idname = 'warcraft_3.import_mdl_mdx'
-    bl_label = 'Exp: Import *.mdl/*.mdx'
-    bl_description = 'Import *.mdl/*.mdx files (Exporter function, 3d models of WarCraft 3)'
+    bl_label = '导入 *.mdl/*.mdx'
+    bl_description = '导入魔兽争霸3 的 .mdl / .mdx 三维模型'
     bl_options = {'UNDO'}
 
     filename_ext = ['.mdx', '.mdl']
     filter_glob: bpy.props.StringProperty(default='*.mdx;*.mdl', options={'HIDDEN'})
-    filepath: bpy.props.StringProperty(name='File Path', maxlen=1024, default='')
-    useCustomFPS: bpy.props.BoolProperty(name='Use Custom FPS', default=False)
-    animationFPS: bpy.props.FloatProperty(name='Animation FPS', default=30.0, min=1.0, max=1000.0)
-    boneSize: bpy.props.FloatProperty(name='Bone Size', default=5.0, min=0.0001, max=1000.0)
+    filepath: bpy.props.StringProperty(name='文件路径', maxlen=1024, default='')
+    useCustomFPS: bpy.props.BoolProperty(
+        name='自定义帧率',
+        description='不按当前场景帧率换算动画，改用下面填的帧率。'
+                    '模型里的动画时间戳是毫秒，帧率决定换算成第几帧',
+        default=False)
+    animationFPS: bpy.props.FloatProperty(
+        name='动画帧率',
+        description='换算动画时间戳时使用的帧率，魔兽争霸3 模型一般按 30 帧制作',
+        default=30.0, min=1.0, max=1000.0)
+    boneSize: bpy.props.FloatProperty(
+        name='骨骼显示大小',
+        description='导入后骨骼在视图里的显示长度。只影响观察，不影响导出结果',
+        default=5.0, min=0.0001, max=1000.0)
     teamColor: bpy.props.FloatVectorProperty(
-        name='Team Color',
+        name='队伍颜色',
+        description='可替换贴图（队伍颜色/光晕）用哪种玩家颜色显示',
         default=constants.TEAM_COLORS['RED'],
         min=0.0,
         max=1.0,
@@ -38,21 +50,21 @@ class WAR3_OT_import_mdlx(bpy.types.Operator, io_utils.ImportHelper):
         )
     setTeamColor: bpy.props.EnumProperty(
         items=[
-            ('RED', 'Red', ''),
-            ('DARK_BLUE', 'Dark Blue', ''),
-            ('TURQUOISE', 'Turquoise', ''),
-            ('VIOLET', 'Violet', ''),
-            ('YELLOW', 'Yellow', ''),
-            ('ORANGE', 'Orange', ''),
-            ('GREEN', 'Green', ''),
-            ('PINK', 'Pink', ''),
-            ('GREY', 'Grey', ''),
-            ('BLUE', 'Blue', ''),
-            ('DARK_GREEN', 'Dark Green', ''),
-            ('BROWN', 'Brown', ''),
-            ('BLACK', 'Black', '')
+            ('RED', '红', ''),
+            ('DARK_BLUE', '深蓝', ''),
+            ('TURQUOISE', '青绿', ''),
+            ('VIOLET', '紫罗兰', ''),
+            ('YELLOW', '黄', ''),
+            ('ORANGE', '橙', ''),
+            ('GREEN', '绿', ''),
+            ('PINK', '粉', ''),
+            ('GREY', '灰', ''),
+            ('BLUE', '蓝', ''),
+            ('DARK_GREEN', '深绿', ''),
+            ('BROWN', '棕', ''),
+            ('BLACK', '黑', '')
             ],
-        name='Set Team Color',
+        name='设置队伍颜色',
         update=set_team_color_property,
         default='RED'
         )
@@ -61,7 +73,7 @@ class WAR3_OT_import_mdlx(bpy.types.Operator, io_utils.ImportHelper):
         layout = self.layout
         split = layout.split(factor=0.9)
         sub_split = split.split(factor=0.5)
-        sub_split.label(text="Team Color:")
+        sub_split.label(text="队伍颜色：")
         sub_split.prop(self, 'setTeamColor', text="")
         split.prop(self, 'teamColor', text="")
         layout.prop(self, 'boneSize')

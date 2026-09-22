@@ -5,7 +5,7 @@ from bpy.types import Operator
 class WAR3_OT_emitter_preset_add(AddPresetBase, Operator):
     """Add an Emitter Preset"""
     bl_idname = "particle.emitter_preset_add"
-    bl_label = "Add Emitter Preset"
+    bl_label = "添加发射器预设"
     bl_options = {'INTERNAL'}
     preset_menu = "PARTICLE_MT_emitter_presets"
 

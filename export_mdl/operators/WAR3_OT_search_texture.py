@@ -19,20 +19,21 @@ texture_paths = load_texture_list()
 
 
 class WAR3_OT_search_texture(Operator):
-    """Search list of Warcraft 3 internal textures"""
+    """从魔兽争霸3 内建贴图列表里查找并填入贴图路径。"""
     bl_idname = "object.search_texture"
-    bl_label = "Search"
+    bl_label = "查找贴图"
     bl_options = {'REGISTER', 'INTERNAL'}
     bl_property = "path"
 
     target: EnumProperty(
-                name="Target Type",
-                items=[('Emitter', 'Emitter', ''),
-                       ('Material', 'Material', '')]
+                name="目标类型",
+                description="把选中的贴图填给谁：发射器的贴图，还是材质的图层",
+                items=[('Emitter', '发射器', ''),
+                       ('Material', '材质图层', '')]
             )
 
     path: EnumProperty(
-                name="Path",
+                name="贴图路径",
                 items=texture_paths
             )
 

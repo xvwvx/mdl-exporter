@@ -63,18 +63,22 @@ class War3EventProperties(PropertyGroup):
         obj['event_id'] = self.event_id
 
     event_type: EnumProperty(
-        name="Event Type",
-        items=[('SND', "Sound", ""),
-               ('FTP', "Footprint", ""),
-               ('SPN', "Spawned Object", ""),
-               ('SPL', "Splat", ""),
-               ('UBR', "UberSplat", "")],
+        name="事件类型",
+        description="事件在游戏里触发的效果种类。选定后物体名会自动改成"
+                    "「类型+序号+事件ID」的形式，导出时靠这个名字识别",
+        items=[('SND', "音效", "播放声音"),
+               ('FTP', "脚印", "生成脚印贴花"),
+               ('SPN', "生成单位", "生成其他单位或物体"),
+               ('SPL', "地面贴花", "生成地面贴花"),
+               ('UBR', "大范围贴花", "生成大范围地面贴花")],
         default='SND',
         update=update_event_type
     )
 
     event_id:   EnumProperty(
-        name="Event ID",
+        name="事件ID",
+        description="事件的具体编号，取值取决于上面选的事件类型"
+                    "（例如音效类型下就是音效编号）",
         items=get_event_items,
         update=update_event_id
     )

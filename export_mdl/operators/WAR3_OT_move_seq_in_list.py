@@ -5,16 +5,17 @@ import bpy
 
 class WAR3_OT_move_seq_in_list(bpy.types.Operator):
     bl_idname = 'war_3.move_seq_in_list'
-    bl_label = 'Warcraft 3 Move Sequence In List'
+    bl_label = '调整序列顺序'
     # bl_description = 'Warcraft 3 Move Sequence In List'
     bl_options = {'UNDO'}
 
     direction: bpy.props.EnumProperty(
-        name="Direction",
-        items=[('FIRST', "First", ""),
-               ('UP', "Up", ""),
-               ('DOWN', "Down", ""),
-               ('LAST', "Last", "")],
+        name="方向",
+        description="把选中的序列移动到列表的哪个位置，顺序会影响导出后序列的排列",
+        items=[('FIRST', "移到最前", ""),
+               ('UP', "上移", ""),
+               ('DOWN', "下移", ""),
+               ('LAST', "移到最后", "")],
         default='UP'
     )
 

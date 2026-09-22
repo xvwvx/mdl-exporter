@@ -5,12 +5,12 @@ from bpy.types import Operator
 class WAR3_OT_search_event_type(Operator):
     """Search list of Warcraft 3 internal events"""
     bl_idname = "object.search_event_type"
-    bl_label = "Search"
+    bl_label = "查找"
     bl_options = {'REGISTER', 'INTERNAL'}
     bl_property = "types"
 
     types: EnumProperty(
-                name="Event Type",
+                name="事件类型",
                 items=[('SND', "Sound", ""),
                        ('FTP', "Footprint", ""),
                        ('SPN', "Spawned Object", ""),

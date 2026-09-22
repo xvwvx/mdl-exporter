@@ -93,13 +93,13 @@ from .operators.WAR3_OT_generate_from_actions import WAR3_OT_generate_from_actio
 from .operators.WAR3_OT_move_seq_in_list import WAR3_OT_move_seq_in_list
 
 bl_info = {
-    "name": "Warcraft MDL Exporter",
+    "name": "魔兽争霸3 MDL 导入导出",
     "author": "Kalle Halvarsson (& twilac)",
     'version': (0, 0, 1),
     "blender": (2, 80, 0),
     'category': 'Import-Export',
-    "location": "File > Export > Warcraft MDL (.mdl)",
-    "description": "Export mesh as Warcraft .MDL",
+    "location": "文件 > 导入/导出 > 魔兽争霸3 MDL (.mdl/.mdx)",
+    "description": "导入与导出魔兽争霸3 模型（.mdl / .mdx）",
     }
 
 
@@ -152,11 +152,11 @@ ui_classes = (
 def menu_func(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
     # self.layout.operator(WAR3_OT_export_mdl.WAR3_OT_export_mdl.bl_idname, text="Warcraft MDL (.mdl)")
-    self.layout.operator(WAR3_OT_export_mdl.bl_idname, text="Warcraft 3 MDL (.mdl)")
+    self.layout.operator(WAR3_OT_export_mdl.bl_idname, text="魔兽争霸3 MDL (.mdl)")
 
 
 def menu_import_mdx(self, context):
-    self.layout.operator(WAR3_OT_import_mdlx.bl_idname, text="Warcraft 3 (.mdl/.mdx) [WC3Exp]")
+    self.layout.operator(WAR3_OT_import_mdlx.bl_idname, text="魔兽争霸3 (.mdl/.mdx) [WC3Exp]")
 
 
 def register():

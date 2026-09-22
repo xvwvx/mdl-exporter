@@ -4,33 +4,34 @@ from bpy.types import Operator
 
 
 class WAR3_OT_add_anim_sequence(Operator):
-    """Add a Warcraft 3 animation sequence using timeline markers"""
+    """新建一条动画序列：会在时间轴上按起止帧创建同名标记。
+序列的起止帧就是从这里写的标记读出来的，所以两者必须成对存在。"""
     bl_idname = "war_3.add_anim_sequence"
-    bl_label = "Add Warcraft 2 Sequence"
+    bl_label = "新建序列"
     bl_options = {'REGISTER', 'INTERNAL'}
 
     seq_name: StringProperty(
-        name="Name",
+        name="序列名",
         default="Stand"
         )
 
     start: IntProperty(
-        name="Start Frame",
+        name="起始帧",
         default=1
         )
 
     end: IntProperty(
-        name="End Frame",
+        name="结束帧",
         default=100
         )
 
     rarity: IntProperty(
-        name="Rarity",
+        name="稀有度",
         default=0
         )
 
     non_looping: BoolProperty(
-        name="Non Looping",
+        name="不循环",
         default=False
         )
 

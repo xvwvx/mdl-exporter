@@ -39,7 +39,9 @@ class War3SequenceProperties(bpy.types.PropertyGroup):
     # Backing field
 
     name_display: bpy.props.StringProperty(
-        name="Name",
+        name="序列名",
+        description="序列的名字，导出后就是动画名（Stand、Attack 等）。"
+                    "改名会同步改时间轴上同名的标记。",
         default="Stand",
         get=get_sequence_name,
         set=set_sequence_name
@@ -61,20 +63,23 @@ class War3SequenceProperties(bpy.types.PropertyGroup):
         )
 
     rarity: bpy.props.IntProperty(
-        name="Rarity",
-        description="How rarely this sequence should play.",
+        name="稀有度",
+        description="随机播放权重：0 表示必定播放，数字越大越少播放。"
+                    "用于同一用途的多个随机动画。",
         default=0,
         min=0
         )
 
     non_looping: bpy.props.BoolProperty(
-        name="Non Looping",
+        name="不循环",
+        description="开启后该动画只播放一次不重复。攻击、死亡、消失这类动作要开。",
         default=False
         )
 
     move_speed: bpy.props.IntProperty(
-        name="Movement Speed",
-        description="The unit movement speed at which this animation will play at 100% speed.",
+        name="移动速度",
+        description="该动画按 100% 速度播放时对应的单位移动速度。Walk 类动画必须填，"
+                    "游戏据此调整播放快慢，让脚不打滑。",
         default=270,
         min=0
         )

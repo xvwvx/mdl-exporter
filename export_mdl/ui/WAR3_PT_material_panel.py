@@ -2,9 +2,12 @@ import bpy
 
 
 class WAR3_PT_material_panel(bpy.types.Panel):
-    """Creates a material editor Panel in the Material window"""
+    """魔兽争霸3 材质图层。一个材质可以有多层，按列表顺序叠加；
+每层的贴图、过滤模式、是否受光/双面等参数都会写进导出的 Material 块。
+这里填的图层名要和材质节点树里那个 UV Mapping 节点的名字一致，
+贴图动画才会被识别。"""
     bl_idname = "WAR3_PT_material_panel"
-    bl_label = "MDL Material Settings"
+    bl_label = "MDL 材质设置"
     bl_region_type = 'WINDOW'
     bl_space_type = 'PROPERTIES'
     bl_context = 'material'
@@ -19,7 +22,7 @@ class WAR3_PT_material_panel(bpy.types.Panel):
 
         layout.prop(mat, "priority_plane")
         layout.separator()
-        layout.label(text="Layers")
+        layout.label(text="图层")
 
         layers = getattr(mat, "mdl_layers", None)
         index = getattr(mat, "mdl_layer_index", None)
@@ -45,7 +48,7 @@ class WAR3_PT_material_panel(bpy.types.Panel):
                 col.prop(active_layer, "texture_type")
                 if active_layer.texture_type == '0':  # Image texture
                     row = col.row()
-                    row.label(text="Texture Path")
+                    row.label(text="贴图路径")
                     row.operator("object.search_texture", text="", icon='VIEWZOOM').target = 'Material'
                     row.prop(active_layer, "path", text="")
 

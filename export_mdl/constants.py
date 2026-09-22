@@ -298,6 +298,8 @@ ENCODINGS = {
     'UTF_16': 'utf-16',
     'UTF_32': 'utf-32',
     'ASCII': 'ascii',
+    'GBK': 'gbk',
+    'GB18030': 'gb18030',
     'BIG5': 'big5',
     'EUC_KR': 'euc_kr',
     'EUC_JP': 'euc_jp',

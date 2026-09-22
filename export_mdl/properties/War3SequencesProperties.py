@@ -16,7 +16,7 @@ class War3SequencesProperties(bpy.types.PropertyGroup):
         type=War3SequenceProperties,
         options={'HIDDEN'})
     mdl_sequence_index: bpy.props.IntProperty(
-        name="Sequence index",
+        name="序列索引",
         description="",
         default=0,
         update=set_current_sequence,
@@ -30,7 +30,7 @@ class War3SequencesProperties(bpy.types.PropertyGroup):
             options={'HIDDEN'})
         print("Register \"mdl_sequence_refreshing\"")
         bpy.types.WindowManager.mdl_sequence_refreshing = bpy.props.BoolProperty(
-            name="sequence refreshing",
+            name="序列刷新中",
             description="",
             default=False,
             options={'HIDDEN'})

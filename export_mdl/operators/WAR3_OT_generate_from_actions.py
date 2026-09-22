@@ -4,10 +4,10 @@ from bpy.types import Operator
 
 
 class WAR3_OT_generate_from_actions(Operator):
-    """Generate Warcraft 3 animation sequences from existing actions"""
+    """按现有动作生成序列：每个 Blender 动作生成一条同名序列，长度取动作的帧范围。"""
     bl_idname = "war_3.generate_from_actions"
-    bl_label = "Warcraft 3 Generate Sequences"
-    bl_description = 'Warcraft 3 Generate Sequences From Actions'
+    bl_label = "从动作生成序列"
+    bl_description = '按现有的 Blender 动作（Action）批量生成动画序列'
     bl_options = {'UNDO'}
 
     def execute(self, context: bpy.types.Context):
