@@ -4,6 +4,8 @@ import bpy
 
 from export_mdl.classes.War3Attachment import War3Attachment
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.properties.War3NodeProperties import (NODE_TYPE_ATTACHMENT,
+                                                      set_object_node_type)
 
 
 def create_attachment_empties(bone_size: float,
@@ -21,9 +23,9 @@ def create_attachment_empties(bone_size: float,
 
 
 def create_bpy_attachment(bone_size: float, node: War3Attachment, node_names: Set[str]):
+    # The name is used as-is; the " Ref" suffix the exporter used to look for is
+    # replaced by the mdl_node_type property.
     node_name = node.name
-    if not node_name.endswith(' Ref'):
-        node_name = node_name + ' Ref'
     if node_name in node_names:
         node_name = node_name + ".001"
         if node_name in node_names:
@@ -33,6 +35,7 @@ def create_bpy_attachment(bone_size: float, node: War3Attachment, node_names: Se
     node_names.add(node_name)
     bpy_object = bpy.data.objects.new(node_name, None)
     bpy.context.scene.collection.objects.link(bpy_object)
+    set_object_node_type(bpy_object, NODE_TYPE_ATTACHMENT)
     bpy_object.location = node.pivot
     bpy_object.empty_display_type = 'CONE'
     bpy_object.empty_display_size = bone_size

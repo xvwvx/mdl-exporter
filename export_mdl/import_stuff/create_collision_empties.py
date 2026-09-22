@@ -5,6 +5,8 @@ from mathutils import Vector
 
 from export_mdl.classes.War3CollisionShape import War3CollisionShape
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.properties.War3NodeProperties import (NODE_TYPE_COLLISION_SHAPE,
+                                                      set_object_node_type)
 
 
 def create_collision_empties(nodes: List[War3CollisionShape],
@@ -31,9 +33,9 @@ def apply_parent_bone(bpy_armature_object: bpy.types.Object, bpy_object: bpy.typ
 
 
 def create_bpy_collision(node: War3CollisionShape, node_names: Set[str]):
+    # The "Collision " prefix the exporter used to look for is replaced by the
+    # mdl_node_type property, so the node keeps its own name.
     node_name = node.name
-    if not node_name.startswith('Collision'):
-        node_name = 'Collision ' + node_name
     if node_name in node_names:
         node_name = node_name + ".001"
         if node_name in node_names:
@@ -42,6 +44,7 @@ def create_bpy_collision(node: War3CollisionShape, node_names: Set[str]):
     node_names.add(node_name)
     bpy_object = bpy.data.objects.new(node_name, None)
     bpy.context.scene.collection.objects.link(bpy_object)
+    set_object_node_type(bpy_object, NODE_TYPE_COLLISION_SHAPE)
     bpy_object.location = node.pivot
 
     # A collision chunk may omit BoundsRadius, and a Box is described by its

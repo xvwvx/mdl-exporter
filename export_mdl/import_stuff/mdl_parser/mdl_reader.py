@@ -7,7 +7,7 @@ class Reader:
         print("reading")
         self.file = file
         print("got file")
-        self.chunks = chunkifier(file)
+        self.chunks = chunkifier(strip_comments(file))
         print("split file into chunks")
 
     def parse(self, context):
@@ -17,6 +17,22 @@ class Reader:
         line: str = self.file.readline().replace(",", "").strip()
         bracket_count = count_brackets(bracket_count, line)
         return line, bracket_count
+
+
+def strip_comments(text: str) -> str:
+    """Remove whole-line ``//`` comments.
+
+    MDL files routinely carry comments -- this addon's own exporter writes an
+    "// Exported on ..." header -- and a comment line at the top of the file
+    makes the first chunk's label come out as "//" instead of "Version", so the
+    version chunk is silently skipped.  Only whole-line comments are removed;
+    trailing comments are left alone because a texture path or model name could
+    in principle contain "//".
+    """
+    if "//" not in text:
+        return text
+    return "\n".join(line for line in text.split("\n")
+                     if not line.lstrip().startswith("//"))
 
 
 def chunkifier(chunk_to_split: str) -> List[str]:

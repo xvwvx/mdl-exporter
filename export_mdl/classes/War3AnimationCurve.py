@@ -40,11 +40,23 @@ class War3AnimationCurve:
         return not self.__eq__(other)
 
     def __hash__(self):
-        values = [self.interpolation, self.global_sequence, self.type]
-        values.append(tuple(sorted(self.keyframes.items())))
-        values.append(tuple(sorted(self.handles_left.items())))
-        values.append(tuple(sorted(self.handles_right.items())))
-        return hash(tuple(values))
+        # The keyframe/handle values are lists, so they have to be turned into
+        # tuples before they can be hashed.  TextureAnims are de-duplicated with
+        # a set(), which is what reaches this.
+        return hash((self.interpolation, self.global_sequence, self.type,
+                     _freeze(self.keyframes), _freeze(self.handles_left),
+                     _freeze(self.handles_right)))
+
+
+def _freeze(mapping: Dict[float, List[float]]) -> Tuple:
+    frozen = []
+    for frame, values in mapping.items():
+        try:
+            values = tuple(values)
+        except TypeError:
+            values = (values,)
+        frozen.append((frame, values))
+    return tuple(sorted(frozen))
 
 # import math
 #

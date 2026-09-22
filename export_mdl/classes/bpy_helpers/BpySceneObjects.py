@@ -13,6 +13,10 @@ from ..War3ExportSettings import War3ExportSettings
 from ..model_utils.get_bpy_mesh import get_bpy_mesh, get_bpy_curve_mesh
 from ...compat import bind_action
 from ...properties import War3SequenceProperties, War3ParticleSystemProperties
+from ...properties.War3NodeProperties import (NODE_TYPE_ATTACHMENT,
+                                              NODE_TYPE_COLLISION_SHAPE,
+                                              NODE_TYPE_EVENT, NODE_TYPE_HELPER,
+                                              get_object_node_type)
 
 
 # This is a helper class to collect all relevant blender objects in preparation for saving
@@ -71,7 +75,10 @@ class BpySceneObjects:
         for bpy_emitter in self.ribbons:
             particle_settings: War3ParticleSystemProperties = bpy_emitter.particle_settings
             mat: bpy.types.Material = particle_settings.ribbon_material
-            self.materials.add(mat)
+            # An imported ribbon emitter may have no material resolved yet, and a
+            # None in this set would crash the material export loop.
+            if mat is not None:
+                self.materials.add(mat)
 
         for bpy_obj in self.meshes:
             bpy_mesh = get_bpy_mesh(bpy_obj, context, settings.global_matrix @ bpy_obj.matrix_world)
@@ -139,16 +146,19 @@ class BpySceneObjects:
             print("empty, mat:", bpy_obj.matrix_world)
             print("mat is mat:", isinstance(bpy_obj.matrix_world, Matrix))
             print("mat is list:", isinstance(bpy_obj.matrix_world, List))
-            if obj_name.startswith("SND") \
-                    or obj_name.startswith("UBR") \
-                    or obj_name.startswith("FTP") \
-                    or obj_name.startswith("SPL"):
+            # An object created by the importer carries the War3 node type it
+            # stands for.  Older scenes (and hand-built ones) fall back to the
+            # historical name conventions.
+            node_type = get_object_node_type(bpy_obj)
+            if node_type == NODE_TYPE_EVENT or obj_name.startswith(
+                    ("SND", "UBR", "FTP", "SPL")):
                 self.events.append(BpyEmptyNode(bpy_obj, global_matrix))
-            elif bpy_obj.type == 'EMPTY' and obj_name.startswith('Collision'):
+            elif node_type == NODE_TYPE_COLLISION_SHAPE or obj_name.startswith('Collision'):
                 self.collisions.append(BpyEmptyNode(bpy_obj, global_matrix))
-            elif obj_name.endswith((" Ref", " Ref.001",  " Ref.002")):
+            elif node_type == NODE_TYPE_ATTACHMENT or obj_name.endswith(
+                    (" Ref", " Ref.001", " Ref.002")):
                 self.attachments.append(BpyEmptyNode(bpy_obj, global_matrix))
-            elif obj_name.startswith("Bone_"):
+            elif node_type == NODE_TYPE_HELPER or obj_name.startswith("Bone_"):
                 self.helpers.append(BpyEmptyNode(bpy_obj, global_matrix))
             else:
                 self.helpers.append(BpyEmptyNode(bpy_obj, global_matrix))

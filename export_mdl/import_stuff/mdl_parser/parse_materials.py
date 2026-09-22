@@ -29,6 +29,9 @@ def parse_materials(data: str) -> List[War3Material]:
                 if label == "FilterMode":
                     layer.filter_mode = get_between(info, "FilterMode ", ",")
                 else:
+                    if info.find("TVertexAnimId") > -1:
+                        layer.textureAnimationId = int(
+                            get_between(info, "TVertexAnimId ", ","))
                     if info.find("TextureID") > -1:
                         if info.find("static TextureID") > -1:
                             layer.texture_path = get_between(info, "static TextureID ", ",")
@@ -41,7 +44,7 @@ def parse_materials(data: str) -> List[War3Material]:
                             split = re.split(",\n*\\s*(?=TextureID)", chunk)
                             if 1 < len(split):
                                 texture_chunk = split[1]
-                                layer.texture_anim = parse_geoset_transformation(texture_chunk)
+                                layer.texture_id_anim = parse_geoset_transformation(texture_chunk)
                                 layer.texture_path = get_between(info, "TextureID ", "{")
 
                     if info.find("Alpha") > -1:

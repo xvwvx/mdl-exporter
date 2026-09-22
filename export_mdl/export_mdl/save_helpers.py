@@ -7,12 +7,11 @@ from ..classes.War3Model import War3Model
 
 def save_helpers(fw: TextIO.write, model: War3Model):
     for helper in model.helpers:
-        name = helper.name.replace('.', '_')
-
-        if not name.lower().startswith("bone"):
-            name = "Bone_" + name
-
-        fw("Helper \"%s\" {\n" % name)
+        # The name is written verbatim.  It used to be mangled into "Bone_<name>"
+        # (with dots turned into underscores) so that the importer could spot
+        # helpers by their name prefix; the node type is recorded on the armature
+        # bone now, so mangling only corrupted the names.
+        fw("Helper \"%s\" {\n" % helper.name)
         if 0 <= helper.obj_id:
             fw("\tObjectId %d,\n" % helper.obj_id)
 

@@ -11,6 +11,7 @@ from export_mdl.classes.War3Texture import War3Texture
 from export_mdl.classes.War3TextureAnim import War3TextureAnim
 from export_mdl.classes.animation_curve_utils.get_wc3_animation_curve import get_wc3_animation_curve
 from export_mdl.properties import War3MaterialLayerProperties
+from ...utils import uv_anim_gseq_key, uv_anim_layer_index
 
 
 def get_new_material2(bpy_material: bpy.types.Material,
@@ -33,6 +34,8 @@ def get_new_material2(bpy_material: bpy.types.Material,
         if from_nodes is not None:
             if use_skin_weights:
                 material.is_hd = True
+            attach_texture_animations(bpy_material, from_nodes, sequences,
+                                      actions, global_seqs)
             material.layers.extend(from_nodes)
         else:
             layer = War3Layer()
@@ -40,6 +43,75 @@ def get_new_material2(bpy_material: bpy.types.Material,
             material.layers.append(layer)
 
     return material
+
+
+def attach_texture_animations(bpy_material: bpy.types.Material,
+                              layers: List[War3Layer],
+                              sequences: List[War3AnimationAction],
+                              actions: List[bpy.types.Action],
+                              global_seqs: Set[int]) -> None:
+    """Put the UV animations of a node-derived material back on its layers.
+
+    A material imported from a file has no mdl_layers entries, so its layers are
+    rebuilt from the node graph and would otherwise lose the TextureAnims the
+    importer turned into Mapping node animation.
+    """
+    node_tree = bpy_material.node_tree
+    if node_tree is None or node_tree.animation_data is None:
+        return
+    action = node_tree.animation_data.action
+    for node in node_tree.nodes:
+        index = uv_anim_layer_index(node.name)
+        if index is None:
+            continue
+        texture_anim = get_texture_anim(node_tree.animation_data, sequences,
+                                        actions, global_seqs, node)
+        if texture_anim is None:
+            continue
+        texture_anim.rotation = quaternion_rotation(texture_anim.rotation)
+        if action is not None:
+            restore_global_sequences(action, node.name, texture_anim, global_seqs)
+        if index >= len(layers):
+            print("  UV animation \"%s\" targets layer %d but the material has "
+                  "%d layer(s) - attaching to the first"
+                  % (node.name, index, len(layers)))
+            index = 0
+        layers[index].texture_anim = texture_anim
+
+
+def restore_global_sequences(action: bpy.types.Action,
+                             node_name: str,
+                             texture_anim: War3TextureAnim,
+                             global_seqs: Set[int]) -> None:
+    """Blender has no global sequence id, so the importer parked it on the action."""
+    for attribute, _ in (('translation', 'Location'), ('rotation', 'Rotation'),
+                         ('scale', 'Scale')):
+        curve = getattr(texture_anim, attribute, None)
+        if curve is None:
+            continue
+        stored = action.get(uv_anim_gseq_key(node_name, attribute))
+        if stored is None:
+            continue
+        curve.global_sequence = int(stored)
+        if curve.global_sequence > 0:
+            global_seqs.add(curve.global_sequence)
+
+
+def quaternion_rotation(curve: Optional[War3AnimationCurve]):
+    """MDL TVertexAnim rotations are quaternions, Mapping nodes hold Euler XYZ."""
+    if curve is None:
+        return None
+    widths = {len(values) for values in curve.keyframes.values()}
+    if widths == {4}:
+        curve.type = 'Rotation'
+        return curve
+    from mathutils import Euler
+    curve.keyframes = {frame: list(Euler(list(values)[:3]).to_quaternion())
+                       for frame, values in curve.keyframes.items()}
+    curve.handles_left = {}
+    curve.handles_right = {}
+    curve.type = 'Rotation'
+    return curve
 
 
 def layers_from_mat_nodes(bpy_material: bpy.types.Material):
@@ -195,11 +267,18 @@ def get_texture_anim(animation_data: Optional[bpy.types.AnimData],
                 loc_value = 'nodes["%s"].translation'
                 rot_value = 'nodes["%s"].rotation'
                 scl_value = 'nodes["%s"].scale'
-            translation = get_wc3_animation_curve(loc_value % uv_node.name, actions, 3, sequences, global_seqs)
+            # The UV curves live on the node tree's own action; prefer it, but
+            # keep searching the caller's actions so hand-built scenes that put
+            # them elsewhere still work.
+            source_actions = list(actions)
+            if animation_data.action is not None:
+                source_actions = [animation_data.action] + [
+                    act for act in actions if act is not animation_data.action]
+            translation = get_wc3_animation_curve(loc_value % uv_node.name, source_actions, 3, sequences, global_seqs)
 
-            rotation = get_wc3_animation_curve(rot_value % uv_node.name, actions, 3, sequences, global_seqs)
+            rotation = get_wc3_animation_curve(rot_value % uv_node.name, source_actions, 3, sequences, global_seqs)
 
-            scale = get_wc3_animation_curve(scl_value % uv_node.name, actions, 3, sequences, global_seqs)
+            scale = get_wc3_animation_curve(scl_value % uv_node.name, source_actions, 3, sequences, global_seqs)
 
             if any((translation, rotation, scale)):
                 texture_anim = War3TextureAnim()

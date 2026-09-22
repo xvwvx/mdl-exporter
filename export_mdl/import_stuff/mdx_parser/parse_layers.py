@@ -41,7 +41,7 @@ def parse_layers(data: bytes, version: int) -> War3Layer:
             # print("Texture:", i, ", animOrTextureId:", animOrTextureId)
             if 1024 < animOrTextureId:
                 # print("animOrTexture:", animOrTextureId, "size: ", struct.calcsize('<I'))
-                layer.texture_anim = parse_timeline(r, '<I')
+                layer.texture_id_anim = parse_timeline(r, '<I')
                 i -= 1
             else:
                 textureSlot = r.getf('<I')[0]
@@ -56,7 +56,7 @@ def parse_layers(data: bytes, version: int) -> War3Layer:
         chunk_id = r.getid(constants.SUB_CHUNKS_LAYER)
         # print("layer chunk: " + chunk_id)
         if chunk_id == constants.CHUNK_MATERIAL_TEXTURE_ID:
-            layer.texture_anim = parse_timeline(r, '<I')
+            layer.texture_id_anim = parse_timeline(r, '<I')
         elif chunk_id == constants.CHUNK_MATERIAL_ALPHA:
             layer.alpha_anim = parse_timeline(r, '<f')
         elif chunk_id == constants.CHUNK_MATERIAL_FRESNEL_COLOR:
@@ -111,7 +111,7 @@ def parse_layers(r: Reader, version: int) -> War3Layer:
                 r.offset -= struct.calcsize('<I')
                 anim_id = r.getid(constants.SUB_CHUNKS_LAYER)
                 # print("Texture:", i, ", anim_id: ", anim_id)
-                layer.texture_anim = parse_timeline(r, '<I')
+                layer.texture_id_anim = parse_timeline(r, '<I')
             else:
                 textureSlot = r.getf('<I')[0]
                 layer.multi_texture_ids.append(textureSlot)
@@ -124,7 +124,7 @@ def parse_layers(r: Reader, version: int) -> War3Layer:
         chunk_id = r.getid(constants.SUB_CHUNKS_LAYER)
         # print("layer chunk: " + chunk_id)
         if chunk_id == constants.CHUNK_MATERIAL_TEXTURE_ID:
-            layer.texture_anim = parse_timeline(r, '<I')
+            layer.texture_id_anim = parse_timeline(r, '<I')
         elif chunk_id == constants.CHUNK_MATERIAL_ALPHA:
             layer.alpha_anim = parse_timeline(r, '<f')
         elif chunk_id == constants.CHUNK_MATERIAL_FRESNEL_COLOR:

@@ -1,10 +1,36 @@
 import math
+import re
 from operator import itemgetter
-from typing import SupportsRound, List, Tuple
+from typing import Optional, SupportsRound, List, Tuple
 
 from .compat import action_fcurves
 
 decimal_places = 5
+
+# Naming convention linking a material's UV animation to a material layer: the
+# importer creates a Mapping node called "TVertexAnim_<layer index>" and the
+# exporter looks the animation up by that name.
+UV_ANIM_NODE_PREFIX = 'TVertexAnim_'
+UV_ANIM_NODE_RE = re.compile(r'^%s(\d+)$' % UV_ANIM_NODE_PREFIX)
+
+
+def uv_anim_node_name(layer_index: int) -> str:
+    return '%s%d' % (UV_ANIM_NODE_PREFIX, layer_index)
+
+
+def uv_anim_layer_index(node_name: str) -> Optional[int]:
+    match = UV_ANIM_NODE_RE.match(node_name or '')
+    return int(match.group(1)) if match else None
+
+
+# Blender has no equivalent of a Warcraft global sequence id, so the value is
+# parked on the UV animation's action as "<prefix><node>_<track>" and restored on
+# export.
+UV_ANIM_GSEQ_PREFIX = 'mdl_uv_global_seq_'
+
+
+def uv_anim_gseq_key(node_name: str, track: str) -> str:
+    return '%s%s_%s' % (UV_ANIM_GSEQ_PREFIX, node_name, track)
 
 
 def rnd(val: float) -> float:

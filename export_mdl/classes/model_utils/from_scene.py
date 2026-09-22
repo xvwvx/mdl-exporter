@@ -7,6 +7,7 @@ from mathutils import Vector, Matrix
 from .create_material_stuff import get_new_material2
 from .make_bones import parse_armatures
 from ..War3AnimationAction import War3AnimationAction
+from ..War3Bone import War3Bone
 from ..War3Camera import War3Camera
 from ..War3CollisionShape import War3CollisionShape
 from ..War3Emitter import War3Emitter
@@ -23,6 +24,8 @@ from ..War3Node import War3Node
 from .make_mesh import create_geoset, get_geoset_anim, create_geoset_bone, create_armature_bone
 from ..War3Texture import War3Texture
 from ..bpy_helpers.BpySceneObjects import BpySceneObjects
+from ...properties.War3NodeProperties import (NODE_TYPE_BONE, NODE_TYPE_HELPER,
+                                              get_node_type)
 from ...utils import calc_extents
 
 
@@ -43,6 +46,9 @@ def from_scene(context: bpy.types.Context,
     war3_model.sequences.extend(sequences)
 
     parse_bpy_objects2(bpy_scene_objects, settings, war3_model, actions)
+    node_types = get_scene_node_types(bpy_scene_objects)
+    skinned_bones = collect_scene_bone_names(bpy_scene_objects)
+    link_parents_and_drop_standin_bones(war3_model, node_types, skinned_bones)
 
     for bpy_geoset in bpy_scene_objects.geosets:
         print("creating geoset from: " + bpy_geoset.name)
@@ -56,6 +62,14 @@ def from_scene(context: bpy.types.Context,
                                                          settings))
         war_geoset = create_geoset(bpy_geoset)
         war3_model.geosets.append(war_geoset)
+
+        # A geoset with a vertex that has no vertex group needs some node to
+        # fall back on.  Dropping the stand-in bones can leave the model with no
+        # bones at all (a model may legitimately contain only emitters), so add a
+        # synthetic root bone on demand, as parse_armatures() already does.
+        if not len(war3_model.bones) and any(
+                name == "" for row in war_geoset.matrices for name in row):
+            war3_model.bones.append(War3Bone("No_Bones_Found"))
 
         for i in range(0, len(war_geoset.matrices)):
             for j in range(0, len(war_geoset.matrices[i])):
@@ -75,6 +89,9 @@ def from_scene(context: bpy.types.Context,
                 geo_anim.geoset_id = len(war3_model.geosets)-1
 
     for bpy_material in bpy_scene_objects.materials:
+        if bpy_material is None:
+            # An empty material slot can reach here; it is not an error.
+            continue
         use_const_color = any([g for g in war3_model.geosets
                                if g.mat_name == bpy_material.name
                                and g.geoset_anim is not None
@@ -101,7 +118,7 @@ def from_scene(context: bpy.types.Context,
 
     if settings.demote_to_helper:
         # Demote bones to helpers if they have no attached geosets
-        demote_to_helpers(war3_model)
+        demote_to_helpers(war3_model, node_types, skinned_bones)
 
     # We also need the textures used by emitters
     emitters: List[War3Emitter] = []
@@ -155,14 +172,145 @@ def from_scene(context: bpy.types.Context,
     return war3_model
 
 
-def demote_to_helpers(war3_model: War3Model):
+def node_groups(war3_model: War3Model):
+    """Every list of War3 nodes that takes part in the node hierarchy."""
+    return (war3_model.bones, war3_model.helpers, war3_model.lights,
+            war3_model.attachments, war3_model.event_objects,
+            war3_model.collision_shapes, war3_model.particle_systems,
+            war3_model.particle_systems2, war3_model.particle_ribbon)
+
+
+def collect_used_bone_names(war3_model: War3Model) -> Set[str]:
+    """Bone names referenced by a geoset's matrix groups."""
     used_bones: Set[str] = set()
     for geoset in war3_model.geosets:
-        for m in geoset.matrices:
-            for name in m:
-                used_bones.add(name)
+        for matrix in geoset.matrices:
+            used_bones.update(matrix)
+    return used_bones
+
+
+def collect_scene_bone_names(bpy_scene_objects: BpySceneObjects) -> Set[str]:
+    """Bone names any geoset skins to, read off the Blender side.
+
+    The War3 geosets are only built later in from_scene(), but the skinning
+    information is already known here, and a bone that a mesh skins to must never
+    be converted or dropped.
+    """
+    names: Set[str] = set()
+    for geoset in bpy_scene_objects.geosets:
+        for bone_list in geoset.bone_list:
+            names.update(name for name in bone_list if name)
+    return names
+
+
+def get_scene_node_types(bpy_scene_objects: BpySceneObjects) -> Dict[str, str]:
+    """Node types recorded on the armature bones at import time."""
+    node_types: Dict[str, str] = {}
+    for pose_bones in bpy_scene_objects.bpy_nodes.values():
+        for pose_bone in pose_bones:
+            node_types[pose_bone.name] = get_node_type(pose_bone.bone)
+    return node_types
+
+
+def link_parents_and_drop_standin_bones(war3_model: War3Model,
+                                        node_types: Dict[str, str],
+                                        skinned_bones: Set[str]) -> None:
+    """Restore node types, resolve parents and remove the stand-in bones.
+
+    Importing represents every War3 node as an armature bone *and* as a separate
+    object, and on export only bones ever get ``parent_node`` set -- every other
+    node type carries just its parent's *name*.  Three problems follow from that:
+
+    * lights, attachments, events, collision shapes and emitters were written
+      without a ``Parent`` line at all, so the node hierarchy was flattened,
+    * the stand-in bone was written as an extra ``Bone`` chunk next to the node's
+      real chunk, duplicating the node and shifting every later ``ObjectId``, and
+    * helper nodes came back as bones, because the Bone / Helper distinction was
+      not recorded anywhere.
+
+    The first two are fixed here directly; the third uses the node type recorded
+    on the armature bone by :func:`create_armature_object.record_node_types`.
+    """
+    groups = node_groups(war3_model)
+
+    by_name: Dict[str, War3Node] = {}
+    for group in groups:
+        for node in group:
+            by_name.setdefault(node.name, node)
+
+    for group in groups:
+        for node in group:
+            if node.parent_node is None and node.parent:
+                node.parent_node = by_name.get(node.parent)
+
+    used_bones = skinned_bones | collect_used_bone_names(war3_model)
+    dropped = 0
+
+    # 1. Bones that came from a Helper chunk become helpers again.
     bone_to_helper: Dict[War3Node, War3Node] = {}
     for bone in war3_model.bones:
+        if node_types.get(bone.name) != NODE_TYPE_HELPER:
+            continue
+        helper = War3Helper(bone.name, bone.obj_id, bone.pivot, bone.parent_id,
+                            bone.parent, bone.anim_loc, bone.anim_rot,
+                            bone.anim_scale, bone.bindpose)
+        helper.parent_node = bone.parent_node
+        helper.billboarded = bone.billboarded
+        helper.billboard_lock = bone.billboard_lock
+        helper.visibility = getattr(bone, "visibility", None)
+        war3_model.helpers.append(helper)
+        bone_to_helper[bone] = helper
+    if bone_to_helper:
+        for group in groups:
+            for node in group:
+                if node.parent_node in bone_to_helper:
+                    node.parent_node = bone_to_helper[node.parent_node]
+        for bone in bone_to_helper:
+            war3_model.bones.remove(bone)
+        dropped += len(bone_to_helper)
+        print("  restored %d helper node(s)" % len(bone_to_helper))
+
+    # 2. Bones that only stand in for a node with its own chunk writer go away.
+    # A geoset matrix refers to a node by *name*, and the node keeps its name
+    # with its real chunk, so dropping the stand-in never breaks skinning.
+    non_bone: Dict[str, War3Node] = {}
+    for group in (war3_model.lights, war3_model.attachments,
+                  war3_model.event_objects, war3_model.collision_shapes,
+                  war3_model.particle_systems, war3_model.particle_systems2,
+                  war3_model.particle_ribbon, war3_model.helpers):
+        for node in group:
+            non_bone.setdefault(node.name, node)
+
+    bone_to_node: Dict[War3Node, War3Node] = {}
+    for bone in war3_model.bones:
+        node = non_bone.get(bone.name)
+        if node is not None and node is not bone:
+            bone_to_node[bone] = node
+
+    if bone_to_node:
+        for group in groups:
+            for node in group:
+                if node.parent_node in bone_to_node:
+                    node.parent_node = bone_to_node[node.parent_node]
+        for bone in bone_to_node:
+            war3_model.bones.remove(bone)
+        dropped += len(bone_to_node)
+        print("  dropped %d stand-in bone(s)" % len(bone_to_node))
+
+
+def demote_to_helpers(war3_model: War3Model, node_types: Dict[str, str],
+                      skinned_bones: Set[str]):
+    """Demote unused bones to helpers, unless they are explicitly typed bones.
+
+    A bone that was read from a Bone chunk keeps its type, so a round-trip does
+    not silently rewrite it; only bones with no recorded type (a hand-built
+    armature) are demoted on the strength of "no geoset uses it".
+    """
+    used_bones = skinned_bones | collect_used_bone_names(war3_model)
+    bone_to_helper: Dict[War3Node, War3Node] = {}
+    for bone in war3_model.bones:
+        if node_types.get(bone.name) == NODE_TYPE_BONE:
+            continue
         if bone.name not in used_bones:
             # print("demoting", bone.name, "to helper")
             helper = War3Helper(bone.name, bone.obj_id, bone.pivot,
@@ -267,7 +415,11 @@ def parse_bpy_objects2(bpy_scene_objects: BpySceneObjects,
         ribbon_emitter = get_ribbon_emitter(sequences, global_seqs, actions, bpy_emitter,
                                             optimize_tolerance,
                                             global_matrix)
-        validMaterials = [m for m in war3_model.materials if (m.name == ribbon_emitter.emitter.ribbon_material.name)]
+        ribbon_material = ribbon_emitter.emitter.ribbon_material
+        if ribbon_material is not None:
+            validMaterials = [m for m in war3_model.materials if (m.name == ribbon_material.name)]
+        else:
+            validMaterials = []
         if 0 < len(validMaterials):
             ribbon_emitter.material = validMaterials[0]
         elif 0 < len(war3_model.materials):

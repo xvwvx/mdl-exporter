@@ -4,6 +4,8 @@ import bpy
 
 from export_mdl.classes.War3EventObject import War3EventObject
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.properties.War3NodeProperties import (NODE_TYPE_EVENT,
+                                                      set_object_node_type)
 
 
 def create_event_empties(bone_size: float,
@@ -31,6 +33,7 @@ def create_bpy_event(bone_size: float, node: War3EventObject, node_names: Set[st
     node_names.add(node_name)
     bpy_object = bpy.data.objects.new(node_name, None)
     bpy.context.scene.collection.objects.link(bpy_object)
+    set_object_node_type(bpy_object, NODE_TYPE_EVENT)
     bpy_object.location = node.pivot
     bpy_object.empty_display_type = 'CIRCLE'
     bpy_object.empty_display_size = bone_size

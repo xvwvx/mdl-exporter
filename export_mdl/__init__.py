@@ -69,6 +69,7 @@ from .properties.War3BillboardProperties import War3BillboardProperties
 from .properties.War3EventProperties import War3EventProperties
 from .properties.War3LightSettings import War3LightSettings
 from .properties.War3MaterialLayerProperties import War3MaterialLayerProperties
+from .properties.War3NodeProperties import War3NodeProperties
 from .properties.War3ParticleSystemProperties import War3ParticleSystemProperties
 from .properties.War3ArmatureSequenceListItem import War3ArmatureSequenceListItem
 from .properties.War3SequenceProperties import War3SequenceProperties
@@ -112,7 +113,8 @@ prop_classes = (
     War3ArmatureSequenceListItem,
     War3ArmatureProperties,
     War3SequenceProperties,
-    War3SequencesProperties
+    War3SequencesProperties,
+    War3NodeProperties
 )
 
 op_classes = (

@@ -20,10 +20,13 @@ def parse_node(data: str, node: War3Node):
     bone_info = extract_bracket_content(data)
     start_points = []
 
-    for point in [bone_info.find("Translation"), bone_info.find("Rotation"), bone_info.find("Scaling")]:
-        if point != -1:
-            if re.match('((Translation)|(Rotation)|(Scaling)) \\d', bone_info[point:]):
-                start_points.append(point)
+    # Any of these may open the node's track block.  Visibility has to be
+    # included, otherwise a node whose only track is Visibility (common for
+    # lights and emitters) loses it.
+    for track in ("Translation", "Rotation", "Scaling", "Visibility"):
+        point = bone_info.find(track)
+        if point != -1 and re.match('%s \\d' % track, bone_info[point:]):
+            start_points.append(point)
 
     if len(start_points) == 0:
         start_points.append(-1)

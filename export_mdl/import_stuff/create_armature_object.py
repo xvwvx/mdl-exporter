@@ -1,10 +1,16 @@
-from typing import List, Set
+from typing import Dict, List, Set
 
 import bpy
 from mathutils import Vector
 
 from ..classes.War3Model import War3Model
 from ..classes.War3Node import War3Node
+from ..properties.War3NodeProperties import (NODE_TYPE_ATTACHMENT,
+                                             NODE_TYPE_BONE,
+                                             NODE_TYPE_COLLISION_SHAPE,
+                                             NODE_TYPE_EVENT,
+                                             NODE_TYPE_HELPER,
+                                             set_node_type)
 
 
 def create_armature_object(model: War3Model, bone_size: float) -> bpy.types.Object:
@@ -33,7 +39,38 @@ def create_armature_object(model: War3Model, bone_size: float) -> bpy.types.Obje
     for p_bone in bpy_armature_object.pose.bones:
         p_bone.rotation_mode = 'QUATERNION'
 
+    record_node_types(model, bpy_armature)
+
     return bpy_armature_object
+
+
+def get_node_type_map(model: War3Model) -> Dict[str, str]:
+    """Which War3 chunk each parsed node came from.
+
+    Every node is represented by an armature bone, so without this the
+    Bone / Helper / Attachment / Event / CollisionShape distinction is lost and
+    the exporter can only guess (see demote_to_helpers).
+    """
+    node_types: Dict[str, str] = {}
+    for node in model.bones:
+        node_types[node.name] = NODE_TYPE_BONE
+    for node in model.helpers:
+        node_types[node.name] = NODE_TYPE_HELPER
+    for node in model.attachments:
+        node_types[node.name] = NODE_TYPE_ATTACHMENT
+    for node in model.event_objects:
+        node_types[node.name] = NODE_TYPE_EVENT
+    for node in model.collision_shapes:
+        node_types[node.name] = NODE_TYPE_COLLISION_SHAPE
+    return node_types
+
+
+def record_node_types(model: War3Model, bpy_armature: bpy.types.Armature) -> None:
+    node_types = get_node_type_map(model)
+    for bone in bpy_armature.bones:
+        node_type = node_types.get(bone.name)
+        if node_type is not None:
+            set_node_type(bone, node_type)
 
 
 def get_bpy_armature_object(name: str) -> bpy.types.Object:

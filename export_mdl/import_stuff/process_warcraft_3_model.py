@@ -55,6 +55,12 @@ def process_warcraft_3_model(model: War3Model):
         model.textures.append(War3Texture())
     for material in model.materials:
         for layer in material.layers:
+            # A layer points at its UV animation by index (TextureAnimationId /
+            # TVertexAnimId); the TextureAnims chunk is parsed after Materials,
+            # so the reference is resolved here.
+            index = getattr(layer, "textureAnimationId", 0)
+            if 0 <= index < len(model.tvertex_anims):
+                layer.texture_anim = model.tvertex_anims[index]
             if int(layer.texture_path) < len(model.textures):
                 layer.texture = model.textures[int(layer.texture_path)]
             else:

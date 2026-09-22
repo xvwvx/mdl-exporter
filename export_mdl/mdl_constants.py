@@ -1,6 +1,7 @@
 VERSION: str            = "Version"
 MODEL: str              = "Model"
 SEQUENCES: str          = "Sequences"
+GLOBAL_SEQUENCES: str   = "GlobalSequences"
 TEXTURES: str           = "Textures"
 MATERIALS: str          = "Materials"
 GEOSET: str             = "Geoset"

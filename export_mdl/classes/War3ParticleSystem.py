@@ -197,8 +197,19 @@ class War3ParticleSystem(War3Emitter):
         fw("\tDecayUVAnim { %d, %d, %d },\n" % (self.emitter.head_decay_start, self.emitter.head_decay_end, self.emitter.head_decay_repeat))
         fw("\tTailUVAnim { %d, %d, %d },\n" % (self.emitter.tail_life_start, self.emitter.tail_life_end, self.emitter.tail_life_repeat))
         fw("\tTailDecayUVAnim { %d, %d, %d },\n" % (self.emitter.tail_decay_start, self.emitter.tail_decay_end, self.emitter.tail_decay_repeat))
-        # fw("\tTextureID %d,\n" % textures.index(self.emitter.texture_path))
-        fw("\tTextureID %d,\n" % textures.index(self.texture))
+        # TextureID indexes the model's texture list.  War3Texture compares by
+        # identity and self.texture is a fresh object, so look the entry up by
+        # path -- a material layer usually already owns the same path.
+        texture_slot = 0
+        for i, texture in enumerate(textures):
+            if texture.texture_path == self.emitter.texture_path:
+                texture_slot = i
+                break
+        else:
+            print("  particle emitter \"%s\": texture \"%s\" is not in the "
+                  "model's texture list - writing slot 0"
+                  % (self.name, self.emitter.texture_path))
+        fw("\tTextureID %d,\n" % texture_slot)
 
         if self.emitter.priority_plane != 0:
             fw("\tPriorityPlane %d,\n" % self.emitter.priority_plane)

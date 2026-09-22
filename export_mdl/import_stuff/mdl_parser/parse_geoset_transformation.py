@@ -1,5 +1,6 @@
 import re
 from .mdl_reader import extract_bracket_content, extract_float_values, chunkifier
+from ..global_sequences import resolve
 from ...classes.War3AnimationCurve import War3AnimationCurve
 
 
@@ -8,7 +9,10 @@ def parse_geoset_transformation(node_chunk: str) -> War3AnimationCurve:
 
     transformation_chunk = extract_bracket_content(node_chunk)
     transformation.interpolation = transformation_chunk.split(",")[0].strip()
-    # globalSequenceId = -1
+    # GlobalSeqId is an index into the file's GlobalSequences list.
+    global_seq_match = re.search(r'GlobalSeqId\s+(\d+)', transformation_chunk)
+    if global_seq_match:
+        transformation.global_sequence = resolve(int(global_seq_match.group(1)))
 
     points_start = transformation_chunk.find(",")
     should_chunkify = transformation_chunk.find("{") > -1

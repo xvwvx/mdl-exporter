@@ -1,6 +1,7 @@
 from typing import List
 
 from .binary_reader import Reader
+from ..global_sequences import resolve_raw
 from ...classes.War3AnimationCurve import War3AnimationCurve
 from ... import constants
 
@@ -16,7 +17,9 @@ def parse_timeline(r: Reader, value_format: str) -> War3AnimationCurve:
     tracks_count = r.getf('<I')[0]
     interpolation_int = r.getf('<I')[0]
     transformation.interpolation = constants.INTERPOLATION_TYPE_MDL_NAMES.get(interpolation_int, 'DontInterp')
-    transformation.global_sequence = r.getf('<I')[0]
+    # The file stores an index into the GLBS list; the rest of the addon uses the
+    # duration in milliseconds.
+    transformation.global_sequence = resolve_raw(r.getf('<I')[0])
 
     # print("\ttracks_count: ", tracks_count, "interpolation: ", interpolation_int, "global_sequence: ", transformation.global_sequence,)
     for _ in range(tracks_count):

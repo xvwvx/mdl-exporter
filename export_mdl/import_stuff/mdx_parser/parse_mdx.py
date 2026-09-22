@@ -1,6 +1,7 @@
 from typing import List
 
 from ..MDXImportProperties import MDXImportProperties
+from .. import global_sequences
 from ..load_warcraft_3_model import load_warcraft_3_model
 from ..process_warcraft_3_model import process_warcraft_3_model
 from ...classes.War3Model import War3Model
@@ -8,21 +9,27 @@ from ... import constants
 from . import binary_reader
 from .parse_attachments import parse_attachments
 from .parse_bones import parse_bones
+from .parse_cameras import parse_cameras
 from .parse_collision_shapes import parse_collision_shapes
 from .parse_events import parse_events
+from .parse_global_sequences import parse_global_sequences
 from .parse_geoset_animations import parse_geoset_animations
 from .parse_geosets import parse_geosets
 from .parse_helpers import parse_helpers
 from .parse_materials import parse_materials
 from .parse_model import parse_model
+from .parse_particle_emitters import parse_particle_emitters, parse_particle_emitters2
 from .parse_pivot_points import parse_pivot_points
+from .parse_ribbon_emitters import parse_ribbon_emitters
 from .parse_sequences import parse_sequences
+from .parse_texture_animations import parse_texture_animations
 from .parse_textures import parse_textures
 from .parse_version import parse_version
 from .parse_lights import parse_lights
 
 
 def parse_mdx(data: bytes, import_properties: MDXImportProperties):
+    global_sequences.reset()
     data_size = len(data)
     r = binary_reader.Reader(data)
     r.getid(constants.CHUNK_MDX_MODEL)
@@ -49,13 +56,16 @@ def parse_mdx(data: bytes, import_properties: MDXImportProperties):
             model.name = parse_model(chunk_data)
             print(" Model name: " + model.name)
         elif chunk_id == constants.CHUNK_GLOBAL_SEQUENCE:
-            print(" Global sequence! (unimplemented)")
+            model.global_seqs.update(parse_global_sequences(chunk_data))
         elif chunk_id == constants.CHUNK_SEQUENCE:
             model.sequences.extend(parse_sequences(chunk_data))
         elif chunk_id == constants.CHUNK_TEXTURE:
             model.textures.extend(parse_textures(chunk_data))
         elif chunk_id == constants.CHUNK_MATERIAL:
             model.materials.extend(parse_materials(chunk_data, model.version))
+        elif chunk_id == constants.CHUNK_TEXTURE_ANIMATIONS:
+            print(" parsing texture animations")
+            model.tvertex_anims.extend(parse_texture_animations(chunk_data))
         elif chunk_id == constants.CHUNK_GEOSET:
             print(" parsing geosets")
             model.geosets.extend(parse_geosets(chunk_data, model.version, model.name))
@@ -72,6 +82,19 @@ def parse_mdx(data: bytes, import_properties: MDXImportProperties):
             model.attachments.extend(parse_attachments(chunk_data))
         elif chunk_id == constants.CHUNK_EVENT_OBJECT:
             model.event_objects.extend(parse_events(chunk_data))
+        elif chunk_id == constants.CHUNK_PARTICLE_EM:
+            print(" parsing particle emitters")
+            model.particle_systems.extend(parse_particle_emitters(chunk_data))
+        elif chunk_id == constants.CHUNK_PARTICLE_EM2:
+            print(" parsing particle emitters 2")
+            model.particle_systems2.extend(
+                parse_particle_emitters2(chunk_data, model.version))
+        elif chunk_id == constants.CHUNK_RIBBON_EM:
+            print(" parsing ribbon emitters")
+            model.particle_ribbon.extend(parse_ribbon_emitters(chunk_data))
+        elif chunk_id == constants.CHUNK_CAMERAS:
+            print(" parsing cameras")
+            model.cameras.extend(parse_cameras(chunk_data))
         elif chunk_id == constants.CHUNK_COLLISION_SHAPE:
             model.collision_shapes.extend(parse_collision_shapes(chunk_data))
         elif chunk_id == constants.CHUNK_PIVOT_POINT:
