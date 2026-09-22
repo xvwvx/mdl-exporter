@@ -11,7 +11,7 @@ class WAR3_PT_particle_editor_panel(Panel):
     bl_context = 'particle'
 
     @classmethod
-    def poll(self, context):
+    def poll(cls, context):
         return context.active_object is not None and len(context.active_object.particle_systems)
 
     def draw(self, context):
@@ -75,6 +75,7 @@ class WAR3_PT_particle_editor_panel(Panel):
             layout.prop(psys, "filter_mode")
 
             layout.separator()
+            layout.operator("war_3.emitter_set_from_bpy", text="Set from Blender Particle")
 
             layout.prop(psys, "emission_rate")
             layout.prop(psys, "speed")
@@ -187,3 +188,4 @@ class WAR3_PT_particle_editor_panel(Panel):
             col.prop(psys, "xy_quad")
             col.prop(psys, "head")
             col.prop(psys, "tail")
+

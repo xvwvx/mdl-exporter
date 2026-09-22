@@ -12,13 +12,9 @@ def save_geoset_animations(fw: TextIO.write,
                            geosets: List[War3Geoset],
                            global_seqs: Set[int]):
     if len(geoset_anims):
-        print("geoset_anims:", geoset_anims)
         for anim in geoset_anims:
-            print("anim:", anim)
-            print("anim.geoset", anim.geoset)
-            print("geosets.index(anim.geoset):", geosets.index(anim.geoset))
-            # print("anim:", anim, ", anim.geoset", anim.geoset, ", geosets.index(anim.geoset):", geosets.index(anim.geoset))
-            # anim.write_geo_anim(fw, geosets.index(anim.geoset), global_seqs)
+            # GeosetId is resolved by the caller (see export_mdl.prepare_geosets);
+            # War3Geoset hashes by value, so geosets.index() is not usable here.
             anim.write_geo_anim(fw, anim.geoset_id, global_seqs)
             # fw("GeosetAnim {\n")
             # alpha = anim.alpha_anim

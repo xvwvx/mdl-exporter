@@ -24,18 +24,27 @@ def create_light_objects(nodes: List[War3Light], bpy_armature_object: bpy.types.
 
 def create_bpy_light(node):
     bpy_light: bpy.types.Light = bpy.data.lights.new(node.name, type="POINT")
-    bpy_light.energy = node.intensity
-    bpy_light.color = node.color
+    # A light chunk is allowed to carry only animated tracks and no static
+    # values, in which case every field below is None.
+    bpy_light.energy = node.intensity if node.intensity is not None else 0.0
+    if node.color is not None:
+        bpy_light.color = node.color
     if hasattr(bpy_light, 'mdl_light'):
         light_settings: War3LightSettings = bpy_light.__getattribute__('mdl_light')
         light_settings.light_type = node.light_type
         # light_settings.light_type = ('Omnidirectional', 'Directional', 'Ambient')[node.light_type]
-        light_settings.atten_start = node.atten_start
-        light_settings.atten_end = node.atten_end
-        light_settings.color = node.color
-        light_settings.intensity = node.intensity
-        light_settings.amb_color = node.amb_color
-        light_settings.amb_intensity = node.amb_intensity
+        if node.atten_start is not None:
+            light_settings.atten_start = node.atten_start
+        if node.atten_end is not None:
+            light_settings.atten_end = node.atten_end
+        if node.color is not None:
+            light_settings.color = node.color
+        if node.intensity is not None:
+            light_settings.intensity = node.intensity
+        if node.amb_color is not None:
+            light_settings.amb_color = node.amb_color
+        if node.amb_intensity is not None:
+            light_settings.amb_intensity = node.amb_intensity
     bpy_object = bpy.data.objects.new(node.name, bpy_light)
     bpy.context.scene.collection.objects.link(bpy_object)
     bpy_object.location = node.pivot

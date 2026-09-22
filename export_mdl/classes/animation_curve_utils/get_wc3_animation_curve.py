@@ -6,6 +6,7 @@ from mathutils import Euler, Quaternion, Matrix
 
 from ..War3AnimationAction import War3AnimationAction
 from ..War3AnimationCurve import War3AnimationCurve
+from ...compat import action_fcurves, bind_action
 
 
 def get_wc3_animation_curve(data_path: str,
@@ -18,8 +19,9 @@ def get_wc3_animation_curve(data_path: str,
     curves2: Dict[Tuple[str, str, int], bpy.types.FCurve] = {}
     for action in actions:
         # print(action.name)
+        fcurves = action_fcurves(action)
         for index in range(num_indices):
-            curve = action.fcurves.find(data_path, index=index)
+            curve = fcurves.find(data_path, index=index)
             if curve is not None:
                 curves2[(action.name, data_path.split('.')[-1], index)] = curve
                 # (NAME, TRANSFORMATION TYPE, CHANNEL), eg. ('Stand', 'location', 0[x])
@@ -30,9 +32,10 @@ def get_wc3_animation_curve(data_path: str,
             seq_names_to_start[sequence.name] = sequence.start
         anim_curve = get_anim_curve(curves2, data_path)
         for action in actions:
+            fcurves_of_action = action_fcurves(action)
             curves: List[bpy.types.FCurve] = []
             for index in range(num_indices):
-                curve: bpy.types.FCurve = action.fcurves.find(data_path, index=index)
+                curve: bpy.types.FCurve = fcurves_of_action.find(data_path, index=index)
                 if curve is not None:
                     curves.append(curve)
 
@@ -60,7 +63,7 @@ def get_baked_curves(armature: bpy.types.Object,
         keyframes_loc: Dict[float, List[float]] = {}
         keyframes_rot: Dict[float, List[float]] = {}
         keyframes_scale: Dict[float, List[float]] = {}
-        armature.animation_data.action = action
+        bind_action(armature, action)
         first_frame = action.frame_range[0]
         last_frame = action.frame_range[1]
         quat_prev: Optional[Quaternion] = None

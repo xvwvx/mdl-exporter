@@ -11,6 +11,7 @@ from .BpyGeoset import BpyGeoset
 from .BpyLight import BpyLight
 from ..War3ExportSettings import War3ExportSettings
 from ..model_utils.get_bpy_mesh import get_bpy_mesh, get_bpy_curve_mesh
+from ...compat import bind_action
 from ...properties import War3SequenceProperties, War3ParticleSystemProperties
 
 
@@ -106,11 +107,11 @@ class BpySceneObjects:
             data = bpy_obj.particle_systems[0].settings
             if getattr(data, "mdl_particle_sys"):
                 particle_settings: War3ParticleSystemProperties = data.mdl_particle_sys
-                if particle_settings.emiter_type == 'ParticleEmitter':
+                if particle_settings.emitter_type == 'ParticleEmitter':
                     self.particle1s.append(BpyEmitter(bpy_obj, global_matrix, particle_settings))
-                elif particle_settings.emiter_type == 'ParticleEmitter2':
+                elif particle_settings.emitter_type == 'ParticleEmitter2':
                     self.particle2s.append(BpyEmitter(bpy_obj, global_matrix, particle_settings))
-                elif particle_settings.emiter_type == 'RibbonEmitter':
+                elif particle_settings.emitter_type == 'RibbonEmitter':
                     emitter = BpyEmitter(bpy_obj, global_matrix, particle_settings)
                     self.ribbons.append(emitter)
                     self.materials.add(emitter.particle_settings.ribbon_material)
@@ -186,6 +187,11 @@ class BpySceneObjects:
                 self.materials.add(bpy_material)
 
     def get_bpy_armature(self, bpy_obj: bpy.types.Object):
+        # NOTE: this now-unused bake helper still targets the pre-4.0
+        # bpy_extras.anim_utils API.  From 4.0 on, bake_action_objects() takes
+        # (object_action_pairs, *, frames, bake_options) instead of the loose
+        # only_selected/do_pose/do_visual_keying/... keywords used below, so it
+        # needs porting before the call site at collect_meshes() is re-enabled.
         bpy_obj_temp = bpy_obj.copy()
 
         actions_to_bake: List[bpy.types.Action] = []
@@ -199,7 +205,7 @@ class BpySceneObjects:
         for action in actions_to_bake:
             if 'Bezier' not in action.name:
                 pairs = [(bpy_obj_temp, action)]
-                bpy_obj_temp.animation_data.action = action
+                bind_action(bpy_obj_temp, action)
                 baked_action = anim_utils.bake_action_objects(
                     pairs,
                     frames=range(int(action.frame_range[0]), int(action.frame_range[1]+1), 2),

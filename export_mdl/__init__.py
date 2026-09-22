@@ -207,6 +207,7 @@ def unregister():
         unregister_class(cls)
 
     bpy.types.TOPBAR_MT_file_export.remove(menu_func)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_import_mdx)
 
 
 if __name__ == "__main__":

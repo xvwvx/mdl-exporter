@@ -4,6 +4,7 @@ import bpy
 from mathutils import Matrix, Vector, Quaternion
 
 from export_mdl import constants
+from export_mdl.compat import action_fcurves
 from export_mdl.classes.War3AnimationAction import War3AnimationAction
 from export_mdl.classes.War3AnimationCurve import War3AnimationCurve
 from export_mdl.classes.War3Attachment import War3Attachment
@@ -111,12 +112,13 @@ def create_transformation_curves(action: bpy.types.Action,
     interpolation_type = constants.INTERPOLATION_NAME_BLEND_NAME[transformations.interpolation]
 
     fcurves: List[bpy.types.FCurve] = []
+    fcurves_of_action = action_fcurves(action)
 
-    current_fcurve = action.fcurves.find(data_path)
+    current_fcurve = fcurves_of_action.find(data_path)
     if current_fcurve is not None:
-        current_fcurve_index = action.fcurves.values().index(current_fcurve)
+        current_fcurve_index = fcurves_of_action.values().index(current_fcurve)
         for i in range(len(trans_zero_values)):
-            fcurves.append(action.fcurves[current_fcurve_index + i])
+            fcurves.append(fcurves_of_action[current_fcurve_index + i])
 
     # set the keyframe before and after the sequence to same as the first keyframe,
     # or T-pose if first keyframe is not present, to not ge weird
@@ -227,7 +229,7 @@ def set_new_curves(action: bpy.types.Action,
 
     for i in range(len(value)):
         if len(fcurves) <= i:
-            fcurves_new = action.fcurves.new(data_path, index=i, action_group=bone_name)
+            fcurves_new = action_fcurves(action).new(data_path, index=i, action_group=bone_name)
             fcurves.append(fcurves_new)
         org_len = len(fcurves[i].keyframe_points)
         if value is not None and i < len(value):

@@ -1,5 +1,6 @@
 from typing import TextIO, List, Dict, Optional
 
+from .War3Bone import War3Bone
 from .War3GeosetAnim import War3GeosetAnim
 from .War3Vertex import War3Vertex
 from ..utils import float2str, calc_bounds_radius
@@ -10,9 +11,6 @@ class War3Geoset:
         self.vertices: List[War3Vertex] = []
         self.triangles: List[List[int]] = []
         self.matrices: List[List[str]] = []
-        self.skin_matrices: List[List[str]] = []
-        # self.skin_weights = []
-        # self.objects: List[bpy.types.Object] = []
         self.min_extent = None
         self.max_extent = None
         self.mat_name: Optional[str] = None
@@ -33,7 +31,7 @@ class War3Geoset:
 
     def write_geoset(self, fw: TextIO.write, material_names,
                      sequences,
-                     object_indices: Dict[str, int],
+                     bones: List[War3Bone],
                      use_skinweights: bool):
         fw("Geoset {\n")
         # Vertices
@@ -53,24 +51,18 @@ class War3Geoset:
             fw("\t\t{ %s, %s },\n" % tuple(map(float2str, vertex.uv)))
         fw("\t}\n")
 
+        object_indices: Dict[str, int] = {}
+        for bone in bones:
+            object_indices[bone.name] = bone.obj_id
         # VertexGroups
         fw("\tVertexGroup {\n")
-
         if not use_skinweights:
             for vertex in self.vertices:
                 if self.matrices.count(vertex.bone_list):
                     fw("\t\t%d,\n" % self.matrices.index(vertex.bone_list))
                 else:
-                    fw("\t\t%d,\n" % vertex.matrix)
+                    fw("\t\t%d,\n" % 0)
         fw("\t}\n")
-
-        sorted_bone_name_dict: Dict[str, int] = {}
-        if use_skinweights:
-            skin_groups = {}
-            for name in object_indices:
-                skin_groups[object_indices[name]] = name
-            for index in range(0, len(skin_groups)):
-                sorted_bone_name_dict[skin_groups[index]] = index
 
         if use_skinweights:
             # Tangents
@@ -82,7 +74,7 @@ class War3Geoset:
             # SkinWeights
             fw("\tSkinWeights %d {\n" % len(self.vertices))
             for vertex in self.vertices:
-                bones = tuple((sorted_bone_name_dict[name] for name in vertex.bone_list)) + tuple([0, 0, 0, 0])
+                bones = tuple((object_indices[name] for name in vertex.bone_list)) + tuple([0, 0, 0, 0])
                 fw("\t\t%s, %s, %s, %s, " % bones[0:4])
                 weights = list(vertex.weight_list)
                 weights.extend([0, 0, 0, 0])
@@ -105,16 +97,16 @@ class War3Geoset:
         fw("\t}\n")
 
         if use_skinweights:
-            fw("\tGroups %d %d {\n" % (len(self.skin_matrices), sum(len(mtrx) for mtrx in self.skin_matrices)))
+            fw("\tGroups %d %d {\n" % (len(object_indices), sum(len(mtrx) for mtrx in object_indices)))
             i = 0
-            for matrix in self.skin_matrices:
-                fw("\t\tMatrices { %s },\n" % ','.join(str(i) for _ in matrix))
+            for matrix in object_indices:
+                fw("\t\tMatrices { %s },\n" % ', '.join(str(i) for _ in matrix))
                 i = i+1
             fw("\t}\n")
         else:
             fw("\tGroups %d %d {\n" % (len(self.matrices), sum(len(mtrx) for mtrx in self.matrices)))
             for matrix in self.matrices:
-                fw("\t\tMatrices { %s },\n" % ','.join(str(object_indices[g]) for g in matrix))
+                fw("\t\tMatrices { %s },\n" % ','.join(str(object_indices.get(g, 0)) for g in matrix))
             fw("\t}\n")
 
         fw("\tMinimumExtent { %s, %s, %s },\n" % tuple(map(float2str, self.min_extent)))

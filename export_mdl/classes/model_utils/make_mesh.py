@@ -40,7 +40,7 @@ def make_mesh(war3_model: War3Model,
         pivot = settings.global_matrix @ Vector(bpy_geoset.bpy_obj.location)
 
         obj_name = bpy_geoset.name
-        bone: War3Bone = War3Bone(obj_name, pivot, parent_name, anim_loc, anim_rot, anim_scale,
+        bone: War3Bone = War3Bone(obj_name, -1, pivot, None, parent_name, anim_loc, anim_rot, anim_scale,
                                   bpy_geoset.bpy_obj.matrix_basis)
         bone.billboarded = billboarded
         bone.billboard_lock = billboard_lock
@@ -73,15 +73,15 @@ def get_geoset_anim(bpy_geoset: BpyGeoset,
     geo_color_anim = get_wc3_animation_curve(bpy_geoset.get_geo_color_path(), actions, 3, sequences, global_seqs)
     # for index in range(3):
     #     curve = action.fcurves.find(data_path)
-    print("geo_color_anim:", geo_color_anim)
+    # print("geo_color_anim:", geo_color_anim)
     geo_color = [1.0, 1.0, 1.0]
     if bpy_geoset.bpy_material:
         color_node = bpy_geoset.bpy_material.node_tree.nodes.get("Geoset Anim Color")
         if color_node:
-            print("color_node:", color_node)
+            # print("color_node:", color_node)
             geo_color = color_node.outputs[0].default_value
             # node_tree.nodes["Geoset Anim Color"].outputs[0].default_value
-    print(geo_color)
+    # print(geo_color)
 
     object_path = 'bpy.data.objects["' + bpy_geoset.name + '"]'
 
@@ -95,7 +95,6 @@ def get_geoset_anim(bpy_geoset: BpyGeoset,
         alpha_node = bpy_geoset.bpy_material.node_tree.nodes.get("Geoset Anim Alpha")
         if alpha_node:
             geo_alpha = alpha_node.inputs[1].default_value
-    print(geo_alpha)
 
     geoset_anim: Optional[War3GeosetAnim] = None
     if geo_color_anim or geo_alpha_anim or geo_color != [1.0, 1.0, 1.0] or geo_alpha != 1.0:
@@ -116,10 +115,9 @@ def create_geoset(bpy_geoset: BpyGeoset) -> War3Geoset:
             matrix.append(bone_name)
         if matrix not in geoset.matrices:
             geoset.matrices.append(matrix)
-        vertex_group_index = 0 if not len(matrix) or geoset.matrices.count(matrix) else geoset.matrices.index(matrix)
         vertex = War3Vertex(bpy_geoset.pos_list[v_index],
                             bpy_geoset.normal_list[v_index],
-                            bpy_geoset.uv_list[v_index], vertex_group_index,
+                            bpy_geoset.uv_list[v_index],
                             bpy_geoset.bone_list[v_index],
                             bpy_geoset.weight_list[v_index],
                             bpy_geoset.tangent_list[v_index])
@@ -146,7 +144,7 @@ def create_geoset_bone(bpy_geoset: BpyGeoset,
     pivot = settings.global_matrix @ Vector(bpy_geoset.bpy_obj.location)
 
     obj_name = bpy_geoset.name
-    bone: War3Bone = War3Bone(obj_name, pivot, None, anim_loc, anim_rot, anim_scale,
+    bone: War3Bone = War3Bone(obj_name, -1, pivot, None, None, anim_loc, anim_rot, anim_scale,
                               bpy_geoset.bpy_obj.matrix_basis)
 
     if anim_loc is not None:
@@ -157,3 +155,29 @@ def create_geoset_bone(bpy_geoset: BpyGeoset,
         transform_rot(anim_rot.keyframes, bpy_geoset.bpy_obj.matrix_world.inverted())
         transform_rot(anim_rot.keyframes, settings.global_matrix)
     return bone
+
+
+def create_armature_bone(bpy_geoset: BpyGeoset,
+                         actions: List[bpy.types.Action],
+                         sequences: List[War3AnimationAction],
+                         global_seqs: Set[int],
+                         settings: War3ExportSettings) -> War3Bone:
+    if bpy_geoset.bpy_obj.parent:
+        animation_data: bpy.types.AnimData = bpy_geoset.bpy_obj.parent.animation_data
+
+        action: List[bpy.types.Action] = []
+        if animation_data:
+            action.append(animation_data.action)
+        anim_loc, anim_rot, anim_scale = get_loc_rot_scale(sequences, global_seqs, '%s', action,
+                                                           animation_data,
+                                                           settings.optimize_tolerance)
+        pivot = settings.global_matrix @ Vector(bpy_geoset.bpy_obj.parent.location)
+
+        bone: War3Bone = War3Bone(bpy_geoset.parent_name, -1, pivot, None, None, anim_loc, anim_rot, anim_scale,
+                                  bpy_geoset.bpy_obj.parent.matrix_basis)
+        return bone
+    else:
+        pivot = settings.global_matrix @ Vector(bpy_geoset.bpy_obj.location)
+        bone: War3Bone = War3Bone(bpy_geoset.parent_name, -1, pivot, None, None, None, None, None,
+                                  bpy_geoset.bpy_obj.matrix_basis)
+        return bone

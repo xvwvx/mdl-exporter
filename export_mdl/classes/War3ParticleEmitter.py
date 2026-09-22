@@ -15,13 +15,15 @@ from ..properties import War3ParticleSystemProperties
 
 class War3ParticleEmitter(War3Emitter):
     def __init__(self, name,
+                 obj_id: int = -1,
                  pivot: List[float] = [0, 0, 0],
+                 parent_id: Optional[int] = None,
                  parent: Optional[str] = None,
                  anim_loc: Optional[War3AnimationCurve] = None,
                  anim_rot: Optional[War3AnimationCurve] = None,
                  anim_scale: Optional[War3AnimationCurve] = None,
                  bindpose: Optional[Matrix] = None):
-        super().__init__(name, pivot, parent, anim_loc, anim_rot, anim_scale, bindpose)
+        super().__init__(name, obj_id, pivot, parent_id, parent, anim_loc, anim_rot, anim_scale, bindpose)
         self.speed_anim: Optional[War3AnimationCurve] = None
         self.variation_anim: Optional[War3AnimationCurve] = None
         self.latitude_anim: Optional[War3AnimationCurve] = None
@@ -32,7 +34,8 @@ class War3ParticleEmitter(War3Emitter):
 
     @classmethod
     def create_from(cls, node: 'War3Node'):
-        return War3ParticleEmitter(node.name, node.pivot, node.parent,
+        return War3ParticleEmitter(node.name, node.obj_id, node.pivot,
+                                   node.parent_id, node.parent,
                                    node.anim_loc, node.anim_rot, node.anim_scale,
                                    node.bindpose)
 
@@ -92,15 +95,13 @@ class War3ParticleEmitter(War3Emitter):
         curve = get_wc3_animation_curve(data_path, actions, num_indices, sequences, global_seqs)
         return curve
 
-    def write_particle(self, fw: TextIO.write,
-                       object_indices: Dict[str, int],
-                       global_seqs: Set[int]):
+    def write_particle(self, fw: TextIO.write, global_seqs: Set[int]):
         emitter = self.emitter
         fw("ParticleEmitter \"%s\" {\n" % self.name)
-        if len(object_indices) > 1:
-            fw("\tObjectId %d,\n" % object_indices[self.name])
-        if self.parent is not None:
-            fw("\tParent %d,\n" % object_indices[self.parent])
+        if 0 <= self.obj_id:
+            fw("\tObjectId %d,\n" % self.obj_id)
+        if self.parent_id is not None:
+            fw("\tParent %d,\n" % self.parent_id)
 
         fw("\tEmitterUsesMDL,\n")
 

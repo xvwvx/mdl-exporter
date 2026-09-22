@@ -6,7 +6,7 @@ from mathutils import Vector, Matrix
 from .War3Material import War3Material
 from .War3Texture import War3Texture
 from ..export_mdl.write_animation_chunk import write_animation_chunk
-from ..utils import float2str, calc_bounds_radius, rnd
+from ..utils import float2str, rnd
 from .War3AnimationAction import War3AnimationAction
 from .War3Node import War3Node
 from .War3Emitter import War3Emitter
@@ -17,13 +17,15 @@ from ..properties import War3ParticleSystemProperties
 
 class War3RibbonEmitter(War3Emitter):
     def __init__(self, name,
+                 obj_id: int = -1,
                  pivot: List[float] = [0, 0, 0],
+                 parent_id: Optional[int] = None,
                  parent: Optional[str] = None,
                  anim_loc: Optional[War3AnimationCurve] = None,
                  anim_rot: Optional[War3AnimationCurve] = None,
                  anim_scale: Optional[War3AnimationCurve] = None,
                  bindpose: Optional[Matrix] = None):
-        super().__init__(name, pivot, parent, anim_loc, anim_rot, anim_scale, bindpose)
+        super().__init__(name, obj_id, pivot, parent_id, parent, anim_loc, anim_rot, anim_scale, bindpose)
         self.speed_anim: Optional[War3AnimationCurve] = None
         self.variation_anim: Optional[War3AnimationCurve] = None
         self.latitude_anim: Optional[War3AnimationCurve] = None
@@ -31,10 +33,12 @@ class War3RibbonEmitter(War3Emitter):
         self.ribbon_color_anim: Optional[War3AnimationCurve] = None
         self.dimensions: Optional[Vector] = None
         self.scale_anim: Optional[War3AnimationCurve] = None
+        self.material: Optional[War3Material] = None
 
     @classmethod
     def create_from(cls, node: 'War3Node'):
-        return War3RibbonEmitter(node.name, node.pivot, node.parent,
+        return War3RibbonEmitter(node.name, node.obj_id, node.pivot,
+                                 node.parent_id, node.parent,
                                  node.anim_loc, node.anim_rot, node.anim_scale,
                                  node.bindpose)
 
@@ -82,16 +86,15 @@ class War3RibbonEmitter(War3Emitter):
         return curve
 
     def write_ribbon(self, fw: TextIO.write,
-                     object_indices: Dict[str, int],
                      global_seqs: Set[int],
                      textures: List[War3Texture],
                      materials: List[War3Material]):
         emitter = self.emitter
         fw("RibbonEmitter \"%s\" {\n" % self.name)
-        if len(object_indices) > 1:
-            fw("\tObjectId %d,\n" % object_indices[self.name])
-        if self.parent is not None:
-            fw("\tParent %d,\n" % object_indices[self.parent])
+        if 0 <= self.obj_id:
+            fw("\tObjectId %d,\n" % self.obj_id)
+        if self.parent_id is not None:
+            fw("\tParent %d,\n" % self.parent_id)
 
         fw("\tstatic HeightAbove %s,\n" % float2str(rnd(self.dimensions[0] / 2)))
         fw("\tstatic HeightBelow %s,\n" % float2str(rnd(self.dimensions[0] / 2)))
@@ -107,7 +110,18 @@ class War3RibbonEmitter(War3Emitter):
         else:
             fw("\tstatic Color { %s, %s, %s },\n" % tuple(map(float2str, reversed(emitter.ribbon_color))))
 
-        fw("\tstatic TextureSlot %d,\n" % textures.index(emitter.texture_path))
+        # TextureSlot indexes the model's texture list, so look the entry up by
+        # path; emitter.texture_path is a string and must never be passed to
+        # list.index() over War3Texture objects.
+        slot = 0
+        for i, texture in enumerate(textures):
+            if texture.texture_path == emitter.texture_path:
+                slot = i
+                break
+        else:
+            print("  ribbon emitter \"%s\": texture \"%s\" is not in the model's "
+                  "texture list - writing slot 0" % (self.name, emitter.texture_path))
+        fw("\tstatic TextureSlot %d,\n" % slot)
 
         if self.visibility is not None:
             self.write_animated(fw, global_seqs, "Visibility", self.visibility)
@@ -119,10 +133,19 @@ class War3RibbonEmitter(War3Emitter):
         fw("\tRows %d,\n" % emitter.rows)
         fw("\tColumns %d,\n" % emitter.cols)
 
-        for material in materials:
-            if material.name == emitter.ribbon_material.name:
-                fw("\tMaterialID %d,\n" % materials.index(material))
-                break
+        # self.material is the resolved War3Material (from_scene falls back to the
+        # first model material); emitter.ribbon_material is a raw Blender material
+        # and may be unset.
+        material = self.material
+        if material is not None:
+            for index, candidate in enumerate(materials):
+                if candidate.name == material.name:
+                    fw("\tMaterialID %d,\n" % index)
+                    break
+            else:
+                print("  ribbon emitter \"%s\": material \"%s\" is not in the "
+                      "model - no MaterialID written"
+                      % (self.name, material.name))
         fw("}\n")
 
     @staticmethod

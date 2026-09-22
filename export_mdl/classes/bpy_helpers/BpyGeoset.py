@@ -8,7 +8,7 @@ class BpyGeoset:
     def __init__(self, bpy_mesh: bpy.types.Mesh, bpy_obj: bpy.types.Object, material_slot: int, bone_names: List[str]):
         # self.vertex_list: List[int] = []  # indices
         self.name = bpy_obj.name
-        print("BpyGeoset - name:", self.name)
+        print("Processing BpyGeoset - name:", self.name)
         self.bpy_mesh: bpy.types.Mesh = bpy_mesh
         self.bpy_obj: bpy.types.Object = bpy_obj
         self.material_slot: int = material_slot
@@ -32,7 +32,7 @@ class BpyGeoset:
         self.no_vgs: bool = not all_vgs
         self.self_as_parent: bool = bpy_obj.parent is None and not all_vgs
         self.parent_name: Optional[str] = get_parent_name(bpy_obj)
-        print("geoset has self as parent:", self.self_as_parent)
+        # print("geoset has self as parent:", self.self_as_parent)
 
         for tri in bpy_mesh.loop_triangles:
             if tri.material_index is material_slot:
@@ -82,7 +82,7 @@ class BpyGeoset:
                                 else:
                                     self.bone_list.append([""])
                                 # should this be 255..?
-                                self.weight_list.append([1])
+                                self.weight_list.append([255])
 
                             # self.bone_list.append(list(all_vgs[vg.group].name for vg in vertex_groups if vg.weight != 0 and all_vgs[vg.group].name in bone_names))
                             # self.weight_list.append(self.get_int_weights(list(vg.weight for vg in vertex_groups if vg.weight != 0 and all_vgs[vg.group].name in bone_names)))
@@ -94,7 +94,7 @@ class BpyGeoset:
                             else:
                                 self.bone_list.append([""])
                             # should this be 255..?
-                            self.weight_list.append([1])
+                            self.weight_list.append([255])
 
                     tri_vert_map[vert_index] = self.vertex_map[vertex_key]
                 self.tri_map[tuple(tri.vertices)] = tuple([tri_vert_map[v] for v in tri.vertices])

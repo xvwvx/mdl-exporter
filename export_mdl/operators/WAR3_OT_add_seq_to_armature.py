@@ -2,6 +2,8 @@ from typing import Optional
 
 import bpy
 
+from export_mdl.compat import bind_action
+
 
 class WAR3_OT_add_seq_to_armature(bpy.types.Operator):
     bl_idname = 'war_3.add_sequence_to_armature'
@@ -23,10 +25,7 @@ class WAR3_OT_add_seq_to_armature(bpy.types.Operator):
             sequence.name = bpy_action.name
             sequence.action_name = bpy_action.name
 
-            if armature_object.animation_data is None:
-                armature_object.animation_data_create()
-
-            armature_object.animation_data.action = bpy_action
+            bind_action(armature_object, bpy_action)
 
             print("addSeq - ", bpy_action, 0, "-", sequence.length)
             bpy.context.scene.frame_start = 0

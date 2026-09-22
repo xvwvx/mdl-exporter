@@ -5,7 +5,7 @@ from mathutils import Vector, Matrix
 
 from .War3Texture import War3Texture
 from ..export_mdl.write_animation_chunk import write_animation_chunk
-from ..utils import float2str, calc_bounds_radius, rnd
+from ..utils import float2str, rnd
 from .War3AnimationAction import War3AnimationAction
 from .War3Node import War3Node
 from .War3Emitter import War3Emitter
@@ -16,13 +16,15 @@ from ..properties import War3ParticleSystemProperties
 
 class War3ParticleSystem(War3Emitter):
     def __init__(self, name,
+                 obj_id: int = -1,
                  pivot: List[float] = [0, 0, 0],
+                 parent_id: Optional[int] = None,
                  parent: Optional[str] = None,
                  anim_loc: Optional[War3AnimationCurve] = None,
                  anim_rot: Optional[War3AnimationCurve] = None,
                  anim_scale: Optional[War3AnimationCurve] = None,
                  bindpose: Optional[Matrix] = None):
-        super().__init__(name, pivot, parent, anim_loc, anim_rot, anim_scale, bindpose)
+        super().__init__(name, obj_id, pivot, parent_id, parent, anim_loc, anim_rot, anim_scale, bindpose)
         self.emission_rate_anim: Optional[War3AnimationCurve] = None
         self.speed_anim: Optional[War3AnimationCurve] = None
         self.life_span_anim: Optional[War3AnimationCurve] = None
@@ -36,10 +38,12 @@ class War3ParticleSystem(War3Emitter):
         self.emitter: War3ParticleSystemProperties = None
         self.dimensions: Optional[Vector] = None
         self.scale_anim: Optional[War3AnimationCurve] = None
+        self.texture: Optional[War3Texture] = None
 
     @classmethod
     def create_from(cls, node: 'War3Node'):
-        return War3ParticleSystem(node.name, node.pivot, node.parent,
+        return War3ParticleSystem(node.name, node.obj_id, node.pivot,
+                                  node.parent_id, node.parent,
                                   node.anim_loc, node.anim_rot, node.anim_scale,
                                   node.bindpose)
 
@@ -48,6 +52,8 @@ class War3ParticleSystem(War3Emitter):
 
         self.emitter: War3ParticleSystemProperties = settings.mdl_particle_sys
         self.scale_anim: Optional[War3AnimationCurve] = self.anim_stuff(obj.animation_data, actions, 'scale', 2, sequences, global_seqs)
+
+        self.texture = War3Texture(self.emitter.texture_path)
 
         # Animated properties
         bby_anim_data = settings.animation_data
@@ -86,14 +92,13 @@ class War3ParticleSystem(War3Emitter):
         return curve
 
     def write_particle(self, fw: TextIO.write,
-                       object_indices: Dict[str, int],
                        global_seqs: Set[int],
                        textures: List[War3Texture]):
         fw("ParticleEmitter2 \"%s\" {\n" % self.name)
-        if len(object_indices) > 1:
-            fw("\tObjectId %d,\n" % object_indices[self.name])
-        if self.parent is not None:
-            fw("\tParent %d,\n" % object_indices[self.parent])
+        if 0 <= self.obj_id:
+            fw("\tObjectId %d,\n" % self.obj_id)
+        if self.parent_id is not None:
+            fw("\tParent %d,\n" % self.parent_id)
 
         if self.emitter.sort_far_z:
             fw("\tSortPrimsFarZ,\n")
@@ -188,14 +193,12 @@ class War3ParticleSystem(War3Emitter):
         particle_scales = (self.emitter.start_scale, self.emitter.mid_scale, self.emitter.end_scale)
 
         fw("\tParticleScaling { %s, %s, %s },\n" % tuple(map(float2str, particle_scales)))
-        fw("\tLifeSpanUVAnim { %d, %d, %d },\n" % (
-            self.emitter.head_life_start, self.emitter.head_life_end, self.emitter.head_life_repeat))
-        fw("\tDecayUVAnim { %d, %d, %d },\n" % (
-            self.emitter.head_decay_start, self.emitter.head_decay_end, self.emitter.head_decay_repeat))
+        fw("\tLifeSpanUVAnim { %d, %d, %d },\n" % (self.emitter.head_life_start, self.emitter.head_life_end, self.emitter.head_life_repeat))
+        fw("\tDecayUVAnim { %d, %d, %d },\n" % (self.emitter.head_decay_start, self.emitter.head_decay_end, self.emitter.head_decay_repeat))
         fw("\tTailUVAnim { %d, %d, %d },\n" % (self.emitter.tail_life_start, self.emitter.tail_life_end, self.emitter.tail_life_repeat))
-        fw("\tTailDecayUVAnim { %d, %d, %d },\n" % (
-            self.emitter.tail_decay_start, self.emitter.tail_decay_end, self.emitter.tail_decay_repeat))
-        fw("\tTextureID %d,\n" % textures.index(self.emitter.texture_path))
+        fw("\tTailDecayUVAnim { %d, %d, %d },\n" % (self.emitter.tail_decay_start, self.emitter.tail_decay_end, self.emitter.tail_decay_repeat))
+        # fw("\tTextureID %d,\n" % textures.index(self.emitter.texture_path))
+        fw("\tTextureID %d,\n" % textures.index(self.texture))
 
         if self.emitter.priority_plane != 0:
             fw("\tPriorityPlane %d,\n" % self.emitter.priority_plane)

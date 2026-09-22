@@ -43,17 +43,22 @@ def create_bpy_collision(node: War3CollisionShape, node_names: Set[str]):
     bpy_object = bpy.data.objects.new(node_name, None)
     bpy.context.scene.collection.objects.link(bpy_object)
     bpy_object.location = node.pivot
+
+    # A collision chunk may omit BoundsRadius, and a Box is described by its
+    # corner vertices instead, so neither field can be assumed to be present.
+    radius = node.radius
+    if radius is None and node.verts:
+        radius = Vector(node.verts[0]).length
+    if radius is None:
+        print("\tCol - \"%s\" has neither BoundsRadius nor vertices" % node.name)
+        radius = 0.0
+
     # bpy_object.empty_display_type =
-    if node.type == 'Cylinder':
-        bpy_object.empty_display_size = int(node.radius)
-        bpy_object.empty_display_type = 'CUBE'
-    elif node.type == 'Sphere':
-        bpy_object.empty_display_size = int(node.radius)
+    if node.type == 'Sphere':
+        bpy_object.empty_display_size = radius
         bpy_object.empty_display_type = 'SPHERE'
-    elif node.type == 'Box':
-        bpy_object.empty_display_size = Vector(node.verts[0]).length
-        bpy_object.empty_display_type = 'CUBE'
     else:
-        bpy_object.empty_display_size = int(Vector(node.verts[0]).length)
+        # Box and Cylinder are both drawn as a cube.
+        bpy_object.empty_display_size = radius
         bpy_object.empty_display_type = 'CUBE'
     return bpy_object

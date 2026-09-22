@@ -2,13 +2,15 @@ import bmesh
 import bpy
 from bpy.types import Mesh
 
+from ...compat import mesh_calc_normals, mesh_calc_tangents
+
 
 def get_bpy_mesh(bpy_obj: bpy.types.Object, context: bpy.context, matrix) -> Mesh:
-    mod = None
-    if bpy_obj.data.use_auto_smooth:
-        mod = bpy_obj.modifiers.new("EdgeSplitExport", 'EDGE_SPLIT')
+    mod = bpy_obj.modifiers.new("EdgeSplitExport", 'EDGE_SPLIT')
+    if hasattr(bpy_obj.data, 'use_auto_smooth') and bpy_obj.data.use_auto_smooth:
         mod.split_angle = bpy_obj.data.auto_smooth_angle
-        # mod.use_edge_angle = True
+    else:
+        mod.use_edge_angle = False
 
     arm_mod = None
     arm_show_r = True
@@ -33,9 +35,6 @@ def get_bpy_mesh(bpy_obj: bpy.types.Object, context: bpy.context, matrix) -> Mes
         arm_mod.show_render = arm_show_r
         arm_mod.show_viewport = arm_show_v
 
-    if bpy_obj.data.use_auto_smooth:
-        bpy_obj.modifiers.remove(mod)
-
     # Triangulate for web export
     bm = bmesh.new()
     bm.from_mesh(bpy_mesh)
@@ -49,9 +48,19 @@ def get_bpy_mesh(bpy_obj: bpy.types.Object, context: bpy.context, matrix) -> Mes
     bm.free()
     del bm
 
-    bpy_mesh.calc_normals_split()
+    if hasattr(bpy_mesh, 'calc_normals_split'):
+        bpy_mesh.calc_normals_split()
     bpy_mesh.calc_loop_triangles()
-    bpy_mesh.calc_tangents()
+
+    if bpy_mesh.uv_layers and bpy_mesh.uv_layers[0]:
+        layer = bpy_mesh.uv_layers[0]
+        if (hasattr(layer, "uv") and layer.uv
+            or hasattr(layer, "data") and layer.data
+                and hasattr(layer.data, "uv") and layer.data.uv):
+            mesh_calc_tangents(bpy_mesh)
+
+    if mod is not None:
+        bpy_obj.modifiers.remove(mod)
     #
     # if(len(bpy_mesh.materials) == 0):
     #     bpy_mesh.materials.
@@ -105,9 +114,9 @@ def get_bpy_curve_mesh(bpy_obj: bpy.types.Object, context: bpy.context, matrix) 
     bm.free()
     del bm
 
-    bpy_mesh.calc_normals_split()
+    mesh_calc_normals(bpy_mesh)
     bpy_mesh.calc_loop_triangles()
-    bpy_mesh.calc_tangents()
+    mesh_calc_tangents(bpy_mesh)
     #
     # if(len(bpy_mesh.materials) == 0):
     #     bpy_mesh.materials.

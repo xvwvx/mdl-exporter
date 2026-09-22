@@ -2,6 +2,9 @@ from typing import Optional
 
 import bpy
 
+from export_mdl.compat import (set_material_blend, set_material_shadow_method,
+                              set_principled_default)
+
 
 class War3BpyMaterial:
     def __init__(self, material_name: str):
@@ -16,10 +19,9 @@ class War3BpyMaterial:
 
     def get_new_material(self, material_name: str):
         bpy_material: bpy.types.Material = bpy.data.materials.new(name=material_name)
-        bpy_material.shadow_method = 'NONE'
         bpy_material.use_nodes = True
-        bpy_material.blend_method = 'HASHED'
-        bpy_material.shadow_method = 'HASHED'
+        set_material_blend(bpy_material, 'HASHED')
+        set_material_shadow_method(bpy_material, 'HASHED')
         bpy_material.diffuse_color = (1.0, 1.0, 1.0, 1.0)
         return bpy_material
 
@@ -27,8 +29,9 @@ class War3BpyMaterial:
         shader_node = self.find_shader_node()
         if shader_node is None:
             shader_node = self.get_new_node(0, 1, "ShaderNodeBsdfPrincipled")
-        shader_node.inputs[5].default_value = 0.0  # no specular
-        shader_node.inputs[7].default_value = 1.0  # full roughness
+        # 'Specular' was renamed to 'Specular IOR Level' in Blender 4.0
+        set_principled_default(shader_node, 0.0, "Specular IOR Level", "Specular")
+        set_principled_default(shader_node, 1.0, "Roughness")
         return shader_node
 
     def find_shader_node(self) -> Optional[bpy.types.Node]:
