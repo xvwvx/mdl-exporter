@@ -4,6 +4,7 @@ import bpy
 
 from export_mdl.classes.War3Light import War3Light
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.import_stuff.apply_node_flags import apply_node_flags
 from export_mdl.properties import War3LightSettings
 
 
@@ -48,6 +49,7 @@ def create_bpy_light(node):
     bpy_object = bpy.data.objects.new(node.name, bpy_light)
     bpy.context.scene.collection.objects.link(bpy_object)
     bpy_object.location = node.pivot
+    apply_node_flags(bpy_object, node)
     return bpy_object
 
 

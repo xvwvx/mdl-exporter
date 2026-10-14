@@ -186,14 +186,19 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func)
     bpy.types.TOPBAR_MT_file_import.append(menu_import_mdx)
 
+    # 安装发射器预设到用户预设目录。此步骤的任何失败都不能中断插件启用。
     presets_path = os.path.join(bpy.utils.user_resource('SCRIPTS', path="presets"), "mdl_exporter")
     emitters_path = os.path.join(presets_path, "emitters")
-    
-    if not os.path.exists(emitters_path):
-        os.makedirs(emitters_path)
-        source_path = os.path.join(os.path.join(os.path.dirname(__file__), "presets"), "emitters")
-        files = os.listdir(source_path) 
-        [shutil.copy2(os.path.join(source_path, f), emitters_path) for f in files]
+    source_path = os.path.join(os.path.dirname(__file__), "presets", "emitters")
+    try:
+        os.makedirs(emitters_path, exist_ok=True)
+        for name in os.listdir(source_path):
+            src = os.path.join(source_path, name)
+            # 只复制 .py 文件：目录（如 __pycache__）经 copy2 会抛 [Errno 13] Permission denied
+            if name.endswith(".py") and os.path.isfile(src) and not os.path.exists(os.path.join(emitters_path, name)):
+                shutil.copy2(src, emitters_path)
+    except OSError as exc:
+        print("mdl_exporter: 发射器预设安装失败（插件仍可正常启用）:", exc)
 
 
 def unregister():

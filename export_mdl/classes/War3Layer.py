@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from export_mdl.classes.War3AnimationCurve import War3AnimationCurve
 from export_mdl.classes.War3Texture import War3Texture

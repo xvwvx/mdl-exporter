@@ -257,6 +257,8 @@ def link_parents_and_drop_standin_bones(war3_model: War3Model,
         helper.parent_node = bone.parent_node
         helper.billboarded = bone.billboarded
         helper.billboard_lock = bone.billboard_lock
+        helper.dont_inherit = getattr(bone, "dont_inherit", (False, False, False))
+        helper.camera_anchored = getattr(bone, "camera_anchored", False)
         helper.visibility = getattr(bone, "visibility", None)
         war3_model.helpers.append(helper)
         bone_to_helper[bone] = helper
@@ -320,6 +322,8 @@ def demote_to_helpers(war3_model: War3Model, node_types: Dict[str, str],
             helper.parent_node = bone.parent_node
             helper.billboard_lock = bone.billboard_lock
             helper.billboarded = bone.billboarded
+            helper.dont_inherit = getattr(bone, "dont_inherit", (False, False, False))
+            helper.camera_anchored = getattr(bone, "camera_anchored", False)
             helper.bindpose = bone.bindpose
             war3_model.helpers.append(helper)
             bone_to_helper[bone] = helper

@@ -26,3 +26,27 @@ class War3BillboardProperties(PropertyGroup):
                     "常用于让地面上的贴花只随镜头水平旋转",
         default=False
         )
+    dont_inherit_translation: BoolProperty(
+        name="不继承平移",
+        description="开启后父节点的位移不会带着该节点一起动，"
+                    "相当于魔兽3节点标志里的 DontInheritTranslation",
+        default=False
+        )
+    dont_inherit_rotation: BoolProperty(
+        name="不继承旋转",
+        description="开启后父节点的旋转不会带着该节点一起转，"
+                    "相当于魔兽3节点标志里的 DontInheritRotation",
+        default=False
+        )
+    dont_inherit_scaling: BoolProperty(
+        name="不继承缩放",
+        description="开启后父节点的缩放不会影响该节点，"
+                    "相当于魔兽3节点标志里的 DontInheritScaling",
+        default=False
+        )
+    camera_anchored: BoolProperty(
+        name="锚定到镜头",
+        description="让节点的位置跟随当前镜头（过场动画里的定位点常用），"
+                    "相当于魔兽3节点标志里的 CameraAnchored",
+        default=False
+        )

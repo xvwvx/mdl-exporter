@@ -209,6 +209,11 @@ def parse_particle_emitter(data: str) -> War3ParticleEmitter:
     settings = War3EmitterSettings()
     settings.emitter_type = 'ParticleEmitter'
 
+    # 与二进制端成对：节点标志 0x8000/0x10000 在 MDL 里写成这两个关键字，
+    # 写出端见 War3ParticleEmitter.write_particle。
+    settings.unshaded = has_keyword(body, 'EmitterUsesMDL')
+    settings.sort_far_z = has_keyword(body, 'EmitterUsesTGA')
+
     for name, attribute in (('EmissionRate', 'emission_rate'),
                             ('Gravity', 'gravity'),
                             ('Longitude', 'longitude'),

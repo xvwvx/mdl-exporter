@@ -37,9 +37,12 @@ def parse_texture_animations(data: bytes) -> List[War3TextureAnim]:
                 texture_anim.scale = parse_timeline(r, '<3f')
                 texture_anim.scale.type = 'Scale'
             else:
-                print("  unknown TVertexAnim track %r - skipping the rest of the "
-                      "record" % chunk_id)
-                break
+                # A(MdxLoader.cs:750-753)：未知子块跳 4 字节后继续（旧实现直接 break，
+                # 该记录后面的轨道全部丢掉）。
+# 注意：A 对未知 tag 只消费 tag 自身的 4 字节（getid 已经消费掉了），
+                # 这里不能再额外 skip —— 旧实现多跳 4 字节，未知 tag 之后的所有读取
+                # 都整体错位（合成样本 synth_all800.mdx 的层尾填充字节即暴露此错位）。
+                print("  unknown texture-animation sub-chunk %r - skipping 4 bytes" % chunk_id)
 
         animations.append(texture_anim)
     return animations

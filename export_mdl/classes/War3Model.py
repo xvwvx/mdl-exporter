@@ -43,6 +43,8 @@ class War3Model:
         self.lights: List[War3Light] = []
 
         self.pivot_points: List[List[float]] = []
+        # 损坏模型（PIVT 比节点少）里只会提示一次，避免刷屏
+        self.pivot_warning_printed: bool = False
 
         self.objects_all: List[War3Node] = []
         # self.object_indices: Dict[str, int] = {}
@@ -94,7 +96,20 @@ class War3Model:
             if node.obj_id == -1:
                 node.obj_id = len(self.id_to_object)
             self.id_to_object[node.obj_id] = node
-            node.pivot = self.pivot_points[node.obj_id]
+            # 损坏或越界的模型（例如 ScorchedRemains0.mdx：BONE 子块声明 96 个
+            # 节点却只带 1 条记录）里 obj_id 会越过 PIVT 的长度。参考实现对缺失的
+            # pivot 一律退回原点（core/Mdx/MdxInstance.cs:105、232、274 的
+            # "nodeId < Model.Pivots.Count ? Model.Pivots[nodeId] : Vec3.Zero"），
+            # 这里照做：一个坏文件不能中断整个导入。
+            if node.obj_id < len(self.pivot_points):
+                node.pivot = self.pivot_points[node.obj_id]
+            else:
+                if not self.pivot_warning_printed:
+                    print("  模型 %r：节点 %r 的 pivot 越界（obj_id=%d，PIVT 只有 "
+                          "%d 个），退回原点" % (self.name, node.name, node.obj_id,
+                                              len(self.pivot_points)))
+                    self.pivot_warning_printed = True
+                node.pivot = [0.0, 0.0, 0.0]
 
     def setup_node_parents(self):
         for node in self.id_to_object.values():

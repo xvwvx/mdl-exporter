@@ -11,7 +11,8 @@ from export_mdl.classes.War3Texture import War3Texture
 from export_mdl.classes.War3TextureAnim import War3TextureAnim
 from export_mdl.classes.animation_curve_utils.get_wc3_animation_curve import get_wc3_animation_curve
 from export_mdl.properties import War3MaterialLayerProperties
-from ...utils import uv_anim_gseq_key, uv_anim_layer_index
+from ...utils import (get_layer_count, get_layer_filter_mode, get_texture_path,
+                      uv_anim_gseq_key, uv_anim_layer_index)
 
 
 def get_new_material2(bpy_material: bpy.types.Material,
@@ -114,11 +115,30 @@ def quaternion_rotation(curve: Optional[War3AnimationCurve]):
     return curve
 
 
+def find_principled_node(node_tree):
+    """The Principled BSDF of a node tree, by type rather than by name.
+
+    Blender localises the default node names, so a user running the UI in Chinese
+    gets '原理化 BSDF' where an English install has 'Principled BSDF'.  Looking the
+    node up by its name therefore fails for those users and every imported
+    material would be exported as a single blank layer.
+    """
+    if node_tree is None:
+        return None
+    by_name = node_tree.nodes.get("Principled BSDF")
+    if by_name is not None:
+        return by_name
+    for node in node_tree.nodes:
+        if node.type == 'BSDF_PRINCIPLED':
+            return node
+    return None
+
+
 def layers_from_mat_nodes(bpy_material: bpy.types.Material):
     if bpy_material.use_nodes \
             and bpy_material.node_tree \
             and bpy_material.node_tree.nodes \
-            and bpy_material.node_tree.nodes.get("Principled BSDF"):
+            and find_principled_node(bpy_material.node_tree):
         link_dict_bw: Dict[bpy.types.Node, List[bpy.types.NodeLink]] = {}
         links: List[bpy.types.NodeLink] = bpy_material.node_tree.links
         for link in links:
@@ -129,7 +149,7 @@ def layers_from_mat_nodes(bpy_material: bpy.types.Material):
                 link_dict_bw[to_node].append(link)
 
         nodes = bpy_material.node_tree.nodes
-        shader_node: bpy.types.Node = nodes.get("Principled BSDF")
+        shader_node: bpy.types.Node = find_principled_node(bpy_material.node_tree)
         inputs: List[bpy.types.NodeSocket] = shader_node.inputs
 
         socket_to_filePath: Dict[str, List[str]] = {}
@@ -155,7 +175,23 @@ def layers_from_mat_nodes(bpy_material: bpy.types.Material):
                     diff_texs.remove(tex)
 
         diff_path = get_path("Base Color", socket_to_filePath)
-        layers.append(get_layer(diff_path, 0, "Textures\\white.blp"))
+        layers.append(get_layer(diff_path, 0, "Textures\\white.blp",
+                                _restored_filter_mode(bpy_material, 0)))
+
+        # A material imported from a file records how many layers it had.  Note
+        # that the game draws multiple layers from the *same* texture with
+        # different filter modes (a glow layer over a body layer), so the extra
+        # layers reuse the diffuse texture rather than inventing new ones.
+        recorded = get_layer_count(bpy_material)
+        for index in range(1, max(0, recorded)):
+            extra = War3Layer()
+            extra.texture = War3Texture(diff_path, 0)
+            extra.texture_path = diff_path
+            extra.filter_mode = _restored_filter_mode(bpy_material, index)
+            layers.append(extra)
+        if recorded > 1:
+            return layers
+
         norm_path = get_path("Normal", socket_to_filePath)
         orm_path = get_path("Roughness", socket_to_filePath)
         if orm_path is None:
@@ -173,6 +209,24 @@ def layers_from_mat_nodes(bpy_material: bpy.types.Material):
     return None
 
 
+def _restored_filter_mode(bpy_material, index: int) -> str:
+    """Filter mode recorded on the material during import, if any.
+
+    An imported material carries no mdl_layers, so its layers are rebuilt from
+    the node graph, which cannot know how the game blended them.  Without this
+    every imported model would export with every layer set to 'None' and the
+    effect planes would stop glowing in game.
+    """
+    recorded = get_layer_filter_mode(bpy_material, index)
+    if recorded:
+        return recorded
+    # Fall back to the material's blend method for hand-built materials.
+    blend = getattr(bpy_material, 'blend_method', None)
+    if blend in ('BLEND', 'HASHED', 'CLIP'):
+        return 'Blend'
+    return 'None'
+
+
 def get_path(socket: str, socket_to_filePath: Dict[str, List[str]]):
     if socket is not None \
             and socket_to_filePath.get(socket) is not None \
@@ -181,13 +235,16 @@ def get_path(socket: str, socket_to_filePath: Dict[str, List[str]]):
     return None
 
 
-def get_layer(texture_path: str, replaceable_id: int, alt_path: str = None):
+def get_layer(texture_path: str, replaceable_id: int, alt_path: str = None,
+              filter_mode: str = None):
     layer = War3Layer()
     if texture_path is None:
         texture_path = alt_path
     print("\t LayerTexturePath: ", texture_path)
     layer.texture = War3Texture(texture_path, replaceable_id)
     layer.texture_path = texture_path
+    if filter_mode:
+        layer.filter_mode = filter_mode
     return layer
 
 
@@ -198,7 +255,9 @@ def collect_tex_nodes(curr_link: bpy.types.NodeLink,
     if 0 < max_checks and curr_link is not None:
         from_node = curr_link.from_node
         if isinstance(from_node, bpy.types.ShaderNodeTexImage) and from_node.image is not None:
-            file_paths.append(from_node.image.filepath)
+            # The model's own path when the image came from an import, so the
+            # exported file refers to something the game can find.
+            file_paths.append(get_texture_path(from_node.image))
         elif from_node is not None and link_dict.get(from_node) is not None:
             for link in link_dict.get(from_node):
                 collect_tex_nodes(link, link_dict, file_paths, max_checks-1)

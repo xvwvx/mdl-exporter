@@ -16,7 +16,9 @@ def save_lights(fw: TextIO.write, model: War3Model):
         if light.parent_id is not None:
             fw("\tParent %d,\n" % light.parent_id)
 
-        write_billboard(fw, light.billboarded, light.billboard_lock)
+        write_billboard(fw, light.billboarded, light.billboard_lock,
+                        getattr(light, "dont_inherit", None),
+                        getattr(light, "camera_anchored", False))
 
         fw("\t%s,\n" % light.light_type)
 

@@ -1,6 +1,15 @@
 import bpy
 
 
+def _drop_mpq_cache(self, context):
+    """Release the cached archives so a changed 魔兽3 目录 takes effect at once."""
+    try:
+        from ..import_stuff import create_material
+        create_material.clear_mpq_cache()
+    except Exception:
+        pass
+
+
 class War3Preferences(bpy.types.AddonPreferences):
     bl_idname = 'export_mdl'
     resourceFolder: bpy.props.StringProperty(
@@ -20,10 +29,29 @@ class War3Preferences(bpy.types.AddonPreferences):
         )
     textureExtension: bpy.props.StringProperty(
         name='贴图扩展名',
-        description='查找贴图前，把模型里的 .blp 后缀替换成这里填的后缀。'
-                    '填 png 就会去找同名的 .png（可直接使用转换后的贴图），'
-                    '填 blp 则直接找原始 .blp 文件',
-        default='png'
+        description='查找贴图前，把模型里的 .blp 后缀替换成这里填的后缀。\n'
+                    '默认 blp：直接加载原始 .blp 文件（插件自己解码，无需事先转换）；\n'
+                    '填 png 等其它后缀：改为查找同名的转换后图片，找不到就留空白。',
+        default='blp'
+        )
+    war3Folder: bpy.props.StringProperty(
+        name='魔兽3 目录',
+        description='魔兽争霸3 的安装目录（含 war3.mpq、War3x.mpq 等）。\n'
+                    '勾选下面的「允许从 MPQ 中直接加载」后，前两个目录都没找到的贴图'
+                    '会到这里面的游戏归档里再找一次。\n'
+                    '这是优先级最低的一级：它是游戏原版内容，覆盖不了你自己的贴图。',
+        default='',
+        subtype='DIR_PATH',
+        update=_drop_mpq_cache
+        )
+    useMpq: bpy.props.BoolProperty(
+        name='允许从 MPQ 中直接加载',
+        description='开启后，磁盘上找不到的贴图会直接从「魔兽3 目录」里的 .mpq 归档中读取，'
+                    '无需事先解包。\n'
+                    '优先级最低：只有在贴图资源目录、备用贴图目录里都找不到时才会用到。\n'
+                    '注意：这是游戏原版贴图，地图自带的自定义贴图不在其中。',
+        default=True,
+        update=_drop_mpq_cache
         )
     defaultEncoding: bpy.props.EnumProperty(
         name='文本默认编码',
@@ -54,7 +82,10 @@ class War3Preferences(bpy.types.AddonPreferences):
         box.prop(self, 'resourceFolder')
         box.prop(self, 'alternativeResourceFolder')
         box.prop(self, 'textureExtension')
-        box.label(text="按上面的顺序依次查找；都找不到时贴图留空", icon='INFO')
+        box.separator()
+        box.prop(self, 'war3Folder')
+        box.prop(self, 'useMpq')
+        box.label(text="按上面的顺序依次查找，魔兽3 目录的 MPQ 优先级最低", icon='INFO')
 
         box = layout.box()
         box.label(text="文本编码", icon='FILE_TEXT')

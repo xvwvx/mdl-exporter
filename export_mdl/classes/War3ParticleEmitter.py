@@ -103,7 +103,13 @@ class War3ParticleEmitter(War3Emitter):
         if self.parent_id is not None:
             fw("\tParent %d,\n" % self.parent_id)
 
-        fw("\tEmitterUsesMDL,\n")
+        # 与导入端成对：0x8000/0x10000 两位决定这两个关键字
+        # （parse_particle_emitters.py 的 PREM 分支）。旧实现无条件写
+        # EmitterUsesMDL，把 3 个 EmitterUsesTGA 模型改成了 MDL 语义。
+        if emitter.unshaded:
+            fw("\tEmitterUsesMDL,\n")
+        if emitter.sort_far_z:
+            fw("\tEmitterUsesTGA,\n")
 
         if self.emission_rate_anim is not None:
             self.write_animated(fw, global_seqs, "EmissionRate", self.emission_rate_anim)

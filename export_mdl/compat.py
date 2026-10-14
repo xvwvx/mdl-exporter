@@ -206,13 +206,24 @@ def action_of(id_data) -> Optional["bpy.types.Action"]:
 # --------------------------------------------------------------------------
 def set_material_blend(material: "bpy.types.Material",
                        blend_method: str = "HASHED") -> None:
-    """Set ``blend_method``, tolerating the reduced 4.2+ enum."""
-    if not hasattr(material, "blend_method"):
-        return
-    try:
-        material.blend_method = blend_method
-    except TypeError:
-        material.blend_method = "BLEND"
+    """Set the material's transparency, on both the old and new properties.
+
+    ``blend_method`` is the pre-4.2 control (still present in 5.2 with a reduced
+    enum).  ``surface_render_method`` is what EEVEE Next actually uses, so both
+    are set or a transparent material would still render as a solid slab.
+    """
+    if hasattr(material, "blend_method"):
+        try:
+            material.blend_method = blend_method
+        except TypeError:
+            material.blend_method = "BLEND"
+    if hasattr(material, "surface_render_method"):
+        try:
+            material.surface_render_method = (
+                "BLENDED" if blend_method in ("BLEND", "HASHED", "CLIP")
+                else "DITHERED")
+        except TypeError:
+            pass
 
 
 def set_material_shadow_method(material: "bpy.types.Material",
@@ -220,16 +231,60 @@ def set_material_shadow_method(material: "bpy.types.Material",
     """No-op on 4.2+, where per-material shadow casting was removed.
 
     Shadow visibility became an object level setting (``Object.visible_shadow``),
-    so there is nothing meaningful to forward this to.
+    so there is nothing meaningful to forward this to.  Note that setting
+    ``surface_render_method`` here would *overwrite* ``blend_method`` (DITHERED
+    forces HASHED), so this deliberately leaves it alone.
     """
     if hasattr(material, "shadow_method"):
         material.shadow_method = shadow_method
-    elif hasattr(material, "surface_render_method"):
-        # Closest surviving analogue of "hashed"/dithered shadows.
-        try:
-            material.surface_render_method = "DITHERED"
-        except TypeError:
-            pass
+
+
+# War3 layer filter mode -> Blender material blend method.
+#
+# War3 renders 'Additive' and 'AddAlpha' layers with additive blending, which is
+# what makes the black parts of an effect texture disappear.  Blender has no
+# additive material blend mode, so those are approximated by 'BLEND': what
+# matters is that the texture's alpha is honoured instead of the layer being
+# drawn as an opaque black slab, which is what 'HASHED'/opaque did.
+FILTER_MODE_TO_BLEND = {
+    'None': 'OPAQUE',
+    # 'Transparent' is the game's AlphaKey mode: a 1-bit alpha test that does not
+    # blend, which is what Blender's 'CLIP' does.  Mapping it to 'BLEND' turned
+    # leaves, flags, hair and other cut-out geometry into a blended sheet.
+    'Transparent': 'CLIP',
+    'Blend': 'BLEND',
+    'Additive': 'BLEND',
+    'AddAlpha': 'BLEND',
+    'Modulate': 'BLEND',
+    'Modulate2x': 'BLEND',
+}
+
+# Layers the game draws additively; used to make the material emit light so the
+# effect reads as a glow rather than as dark geometry.
+ADDITIVE_FILTER_MODES = frozenset(['Additive', 'AddAlpha'])
+
+
+def blend_for_filter_mode(filter_mode: str) -> str:
+    """Blender blend method for a War3 layer filter mode."""
+    return FILTER_MODE_TO_BLEND.get(filter_mode, 'OPAQUE')
+
+
+def is_additive_filter_mode(filter_mode: str) -> bool:
+    return filter_mode in ADDITIVE_FILTER_MODES
+
+
+def blend_to_filter_mode(blend_method: str) -> str:
+    """The War3 filter mode an imported material's blend method came from.
+
+    Used when a material has no mdl_layers (an imported one), so that exporting
+    it again writes back the filter mode the model originally had instead of
+    flattening everything to 'None'.
+    """
+    if blend_method == 'CLIP':
+        return 'Transparent'
+    if blend_method in ('BLEND', 'HASHED'):
+        return 'Blend'
+    return 'None'
 
 
 def principled_input(shader_node, *names: str):

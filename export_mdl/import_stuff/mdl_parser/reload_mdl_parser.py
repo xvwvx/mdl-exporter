@@ -5,6 +5,7 @@ from . import mdl_parser_reload
 from . import mdl_reader
 from . import parse_attachments
 from . import parse_bones
+from . import parse_cameras
 from . import parse_collision_shapes
 from . import parse_events
 from . import parse_geometry
@@ -12,14 +13,17 @@ from . import parse_geoset_animations
 from . import parse_geoset_color
 from . import parse_geoset_transformation
 from . import parse_geosets
+from . import parse_global_sequences
 from . import parse_helpers
 from . import parse_light
 from . import parse_materials
 from . import parse_mdl
 from . import parse_model
 from . import parse_node
+from . import parse_particle_emitters
 from . import parse_pivot_points
 from . import parse_sequences
+from . import parse_texture_animations
 from . import parse_textures
 from . import parse_version
 
@@ -31,6 +35,7 @@ try:
     importlib.reload(mdl_reader)
     importlib.reload(parse_attachments)
     importlib.reload(parse_bones)
+    importlib.reload(parse_cameras)
     importlib.reload(parse_collision_shapes)
     importlib.reload(parse_events)
     importlib.reload(parse_geometry)
@@ -38,14 +43,17 @@ try:
     importlib.reload(parse_geoset_color)
     importlib.reload(parse_geoset_transformation)
     importlib.reload(parse_geosets)
+    importlib.reload(parse_global_sequences)
     importlib.reload(parse_helpers)
     importlib.reload(parse_light)
     importlib.reload(parse_materials)
     importlib.reload(parse_mdl)
     importlib.reload(parse_model)
     importlib.reload(parse_node)
+    importlib.reload(parse_particle_emitters)
     importlib.reload(parse_pivot_points)
     importlib.reload(parse_sequences)
+    importlib.reload(parse_texture_animations)
     importlib.reload(parse_textures)
     importlib.reload(parse_version)
 except ImportError:

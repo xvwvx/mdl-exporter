@@ -23,7 +23,9 @@ def save_bones(fw: TextIO.write, model: War3Model):
             fw("\tParent %d,\n" % bone.parent_id)
 
         if hasattr(bone, "billboarded"):
-            write_billboard(fw, bone.billboarded, bone.billboard_lock)
+            write_billboard(fw, bone.billboarded, bone.billboard_lock,
+                            getattr(bone, "dont_inherit", None),
+                            getattr(bone, "camera_anchored", False))
 
         children = [g for g in geosets if bone.name in itertools.chain.from_iterable(g.matrices)]
         if len(children) == 1:

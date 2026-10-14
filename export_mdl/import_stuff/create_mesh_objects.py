@@ -45,8 +45,16 @@ def create_mesh_objects(model: War3Model,
             for bpy_vert, vertex in zip(bpy_mesh.vertices, war3_geoset.vertices):
                 bpy_vert.normal = vertex.normal
 
-        bpy_material = bpy_materials[war3_geoset.mat_name]
-        bpy_mesh.materials.append(bpy_material.bpy_material)
+        bpy_material = bpy_materials.get(war3_geoset.mat_name)
+        if bpy_material is None:
+            # geoset 没有 MATS 子块时 mat_name 仍是 None（parse_geometry.py:107 只在
+            # MATS 里赋值），材质索引也可能越界。参考实现只接受
+            # 0 <= MaterialId < 材质数（MdxLoader.cs:1004、1874-1878），其余情况不绑定
+            # 材质；这里同样不绑定，而不是抛 KeyError 中断整个导入。
+            print("   geoset %r 的材质索引 %r 无效，不绑定材质"
+                  % (mesh_name, war3_geoset.mat_name))
+        else:
+            bpy_mesh.materials.append(bpy_material.bpy_material)
 
         # print("making bone groups")
         for bone in model.bones:
@@ -55,15 +63,29 @@ def create_mesh_objects(model: War3Model,
         # print("applying bones")
         print("   skinning")
         for vertex in war3_geoset.vertices:
-            for i in range(0, len(vertex.bone_list)):
-                if vertex.weight_list[i] != 0:
-                    v_bone = vertex.bone_list[i]
-                    # print("bone:", v_bone, "weight", (vertex.weight_list[i] / 255.0))
+            influences = [(vertex.bone_list[i], vertex.weight_list[i])
+                          for i in range(len(vertex.bone_list))
+                          if vertex.weight_list[i] != 0]
+            if not influences:
+                continue
 
-                    groups: bpy.types.VertexGroups = bpy_object.vertex_groups
-                    vert_group: bpy.types.VertexGroup = groups.get(v_bone)
-                    vert_group.add([war3_geoset.vertices.index(vertex), ], vertex.weight_list[i] / 255.0, 'REPLACE')
-                    # bpy_object.vertex_groups.get(vertex.bone_list[i]).add([vertex_index, ], vertex.weight_list[i] / 255.0, 'REPLACE')
+            # War3 stores up to four bone influences per vertex as relative byte
+            # weights that do not necessarily sum to 255 (a vertex bound rigidly
+            # to two bones is [255, 255]).  Blender's armature modifier expects
+            # the weights of a vertex to sum to 1, so they are normalised here:
+            # leaving them unnormalised moves such a vertex by twice the bone
+            # transform, which tears the mesh apart into scattered pieces.
+            total = sum(weight for _bone, weight in influences)
+            if total <= 0:
+                continue
+
+            groups: bpy.types.VertexGroups = bpy_object.vertex_groups
+            vertex_index = war3_geoset.vertices.index(vertex)
+            for bone_name, weight in influences:
+                vert_group: bpy.types.VertexGroup = groups.get(bone_name)
+                if vert_group is None:
+                    continue
+                vert_group.add([vertex_index, ], weight / total, 'REPLACE')
 
         bpy_object.modifiers.new(name='Armature', type='ARMATURE')
         bpy_object.modifiers['Armature'].object = bpy_armature_object

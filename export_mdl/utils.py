@@ -33,6 +33,49 @@ def uv_anim_gseq_key(node_name: str, track: str) -> str:
     return '%s%s_%s' % (UV_ANIM_GSEQ_PREFIX, node_name, track)
 
 
+# Custom property holding a texture path exactly as the model file wrote it.  The
+# importer resolves textures to real files on disk, but an export has to refer to
+# the game's own path, not to a local filesystem path.
+TEXTURE_PATH_PROPERTY = 'mdl_texture_path'
+
+
+def set_texture_path(image, path: str) -> None:
+    if image is not None and path:
+        image[TEXTURE_PATH_PROPERTY] = path
+
+
+def get_texture_path(image) -> str:
+    """The model's own texture path, falling back to the image's file path."""
+    if image is None:
+        return ''
+    return image.get(TEXTURE_PATH_PROPERTY) or image.filepath
+
+
+# How a texture turned out during import: 'decoded' (.blp decoded by us),
+# 'found' (some other file Blender can read itself), 'failed' (.blp that could
+# not be decoded) or absent (no file was found on disk).
+TEXTURE_STATUS_PROPERTY = 'mdl_texture_status'
+
+# Per-layer War3 filter mode recorded on an imported material, so exporting it
+# again writes the original mode back instead of flattening it to 'None'.
+# The property is '<prefix><layer index>'.
+LAYER_FILTER_MODE_PROPERTY = 'mdl_filter_mode_'
+LAYER_COUNT_PROPERTY = 'mdl_filter_mode_count'
+
+
+def get_layer_filter_mode(material, index: int) -> str:
+    """Recorded filter mode of layer ``index``, or '' when unknown."""
+    if material is None:
+        return ''
+    return material.get('%s%d' % (LAYER_FILTER_MODE_PROPERTY, index), '')
+
+
+def get_layer_count(material) -> int:
+    if material is None:
+        return 0
+    return int(material.get(LAYER_COUNT_PROPERTY, 0))
+
+
 def rnd(val: float) -> float:
     return round(val, decimal_places)
 

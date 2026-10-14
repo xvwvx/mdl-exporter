@@ -39,8 +39,16 @@ class Reader:
 
     def getid(self, required_chunks_id: Tuple[str, ...], debug=True):
         self.offset += 4
-        # chunk_id = struct.unpack_from('<4s', self.__data, self.offset - 4)[0].decode(encoding='mbcs')
-        chunk_id = struct.unpack_from('<4s', self.__data, self.offset - 4)[0].decode(encoding='utf-8')
+        # A(MdxLoader.cs) 把 tag 当 uint32 比较，从不解码成文本；旧实现用 utf-8
+        # 严格解码，一旦未知 tag 的 4 字节里含非法 utf-8 序列就会抛
+        # UnicodeDecodeError，导致整条记录（甚至整块）被丢弃。这里在严格 utf-8
+        # 失败时退化为 latin-1（任何字节都可解码），从而保证"未知 tag 只消费
+        # 自己的 4 字节后继续"的语义（S9/S24）。
+        raw_chunk_id = struct.unpack_from('<4s', self.__data, self.offset - 4)[0]
+        try:
+            chunk_id = raw_chunk_id.decode(encoding='utf-8')
+        except UnicodeDecodeError:
+            chunk_id = raw_chunk_id.decode(encoding='latin-1')
 
         if type(required_chunks_id) == str:
             required_chunks_id = [required_chunks_id, ]

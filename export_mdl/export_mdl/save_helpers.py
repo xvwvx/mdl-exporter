@@ -19,7 +19,9 @@ def save_helpers(fw: TextIO.write, model: War3Model):
             fw("\tParent %d,\n" % helper.parent_id)
 
         if hasattr(helper, "billboarded"):
-            write_billboard(fw, helper.billboarded, helper.billboard_lock)
+            write_billboard(fw, helper.billboarded, helper.billboard_lock,
+                            getattr(helper, "dont_inherit", None),
+                            getattr(helper, "camera_anchored", False))
 
         if helper.anim_loc is not None:
             write_animation_chunk(fw, helper.anim_loc, "Translation", model.global_seqs, "\t")

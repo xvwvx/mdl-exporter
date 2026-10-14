@@ -5,6 +5,7 @@ from mathutils import Vector
 
 from export_mdl.classes.War3CollisionShape import War3CollisionShape
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.import_stuff.apply_node_flags import apply_node_flags
 from export_mdl.properties.War3NodeProperties import (NODE_TYPE_COLLISION_SHAPE,
                                                       set_object_node_type)
 
@@ -64,4 +65,5 @@ def create_bpy_collision(node: War3CollisionShape, node_names: Set[str]):
         # Box and Cylinder are both drawn as a cube.
         bpy_object.empty_display_size = radius
         bpy_object.empty_display_type = 'CUBE'
+    apply_node_flags(bpy_object, node)
     return bpy_object

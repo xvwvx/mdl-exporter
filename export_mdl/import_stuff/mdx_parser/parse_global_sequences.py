@@ -5,6 +5,12 @@
 
 Tracks reference an entry by index, so the parsed list is published for the track
 parser to resolve.
+
+【与参考实现 A 的已知差异，故意不向 A 对齐】
+A(MdxLoader.cs:552-556) 以及 C 引擎都把块首的 count 也当成 durations[0] 读取
+（int count = r.Length / 4; 循环 Add(r.ReadU32())），这会让全局序列的时长整体
+前移一格、并多读一个并不存在的时长。本实现按 MDX 格式规范行事：先读 count，
+再读 count 个时长，所以这里保持现状（S22）。
 """
 
 import struct

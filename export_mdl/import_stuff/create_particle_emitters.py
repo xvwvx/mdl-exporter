@@ -19,7 +19,8 @@ from ..classes.War3EmitterSettings import War3EmitterSettings
 from ..classes.War3Model import War3Model
 from ..classes.War3Node import War3Node
 from ..properties.War3NodeProperties import NODE_TYPE_NONE, set_object_node_type
-from .create_material import get_repl_img
+from .apply_node_flags import apply_node_flags
+from .create_material import classify_replaceable_path, get_repl_img
 from .create_other_objects import animate_objects
 
 # Keep the emitter plane thin; only X and Y are read back on export.
@@ -86,12 +87,19 @@ def create_plane_mesh(name: str, size_x: float, size_y: float) -> bpy.types.Mesh
 def resolve_texture_path(settings: War3EmitterSettings,
                          model: War3Model,
                          team_color: str) -> str:
-    if settings.replaceable_id > 0:
-        return get_repl_img(settings.replaceable_id, team_color)
+    repl_id = int(settings.replaceable_id or 0)
+    if repl_id == 1 or repl_id == 2:
+        return get_repl_img(repl_id, team_color)
     index = settings.texture_id
     if 0 <= index < len(model.textures):
         texture = model.textures[index]
         if texture.texture_path:
+            # An emitter can name a replaceable path without setting ReplaceableId; only
+            # 1/2 are substituted, every other id keeps the model's own texture.
+            if repl_id == 0:
+                kind = classify_replaceable_path(texture.texture_path)
+                if kind:
+                    return get_repl_img(kind, team_color)
             return texture.texture_path
     return settings.texture_path
 
@@ -151,6 +159,7 @@ def create_bpy_emitter(node: War3Node,
             target.ribbon_material = entry.bpy_material
 
     bpy_object.location = node.pivot
+    apply_node_flags(bpy_object, node)
     return bpy_object
 
 

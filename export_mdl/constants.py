@@ -74,7 +74,11 @@ CHUNK_LIGHT_AMBIENT_COLOR       = 'KLBC'  # (MdlUtils.TOKEN_AMB_COLOR, MdlxTimel
 CHUNK_LIGHT_VISIBILITY          = 'KLAV'  # (MdlUtils.TOKEN_VISIBILITY, MdlxTimelineType.FLOAT_TIMELINE),
 # PARTICLE EMITTER 2 ANIMATED SUB-CHUNKS
 CHUNK_PE2_SPEED                 = 'KP2S'
-CHUNK_PE2_VARIATION             = 'KP2V'
+# 依据 A(MdxLoader.cs:1383) 与 MDL 规范：KP2V 是可见性（Visibility），
+# KP2R 才是变化率（Variation）。旧代码把 'KP2V' 命名为 CHUNK_PE2_VARIATION
+# 且完全没有 KP2R，导致 KP2R 轨道被当作未知轨道丢弃、KP2V 语义对调。
+CHUNK_PE2_VISIBILITY            = 'KP2V'
+CHUNK_PE2_VARIATION             = 'KP2R'
 CHUNK_PE2_LATITUDE              = 'KP2L'
 CHUNK_PE2_GRAVITY               = 'KP2G'
 CHUNK_PE2_EMISSION_RATE         = 'KP2E'
@@ -83,12 +87,17 @@ CHUNK_PE2_LENGTH                = 'KP2N'
 CHUNK_PE2_ALPHA                 = 'KP2A'
 CHUNK_PE2_COLOR                 = 'KP2C'
 # PARTICLE EMITTER (LEGACY) ANIMATED SUB-CHUNKS
-CHUNK_PE_EMISSION_RATE          = 'KPES'
+# 依据 A(MdxLoader.cs:1297-1303) 与 MDL 规范，PREM 的轨道标签是：
+#   KPEE=EmissionRate、KPEG=Gravity、KPLN=Longitude、KPLT=Latitude、
+#   KPEL=LifeSpan、KPES=InitVelocity(速度)、KPEV=Visibility
+# 旧值全部错位：KPES 被当成发射率、KPLS 冒充经度（应为 KPLN）、
+# KPET 在 MDX 格式里根本不存在，导致 PREM 的轨道整段解析失败。
+CHUNK_PE_EMISSION_RATE          = 'KPEE'
 CHUNK_PE_GRAVITY                = 'KPEG'
-CHUNK_PE_LONGITUDE              = 'KPLS'
+CHUNK_PE_LONGITUDE              = 'KPLN'
 CHUNK_PE_LATITUDE               = 'KPLT'
 CHUNK_PE_LIFE_SPAN              = 'KPEL'
-CHUNK_PE_INIT_VELOCITY          = 'KPET'
+CHUNK_PE_INIT_VELOCITY          = 'KPES'
 CHUNK_PE_VISIBILITY             = 'KPEV'
 # RIBBON EMITTER ANIMATED SUB-CHUNKS
 CHUNK_RIBBON_HEIGHT_ABOVE       = 'KRHA'
@@ -118,6 +127,7 @@ SUB_CHUNKS_MDX_MODEL = (
     CHUNK_SEQUENCE,
     CHUNK_GLOBAL_SEQUENCE,
     CHUNK_GEOSET_ANIMATION,
+    CHUNK_TEXTURE_ANIMATIONS,
     CHUNK_PARTICLE_EM,
     CHUNK_PARTICLE_EM2,
     CHUNK_POPCORN,
@@ -159,6 +169,7 @@ SUB_CHUNKS_LIGHT = (
     )
 SUB_CHUNKS_PARTICLE_EMITTER2 = (
     CHUNK_PE2_SPEED,
+    CHUNK_PE2_VISIBILITY,
     CHUNK_PE2_VARIATION,
     CHUNK_PE2_LATITUDE,
     CHUNK_PE2_GRAVITY,
@@ -189,6 +200,22 @@ SUB_CHUNKS_CAMERA = (
     CHUNK_CAMERA_TRANSLATION,
     CHUNK_CAMERA_ROLL,
     CHUNK_CAMERA_TARGET
+    )
+# A(MdxLoader.cs:867-877) 认定的 geoset 子块集合（用于按 tag 驱动解析与记录重同步）。
+# TANG/SKIN 不是 A 的集合成员，但旧版实现会读它们（B 端是超集，保留，见 S19）。
+SUB_CHUNKS_GEOSET = (
+    CHUNK_VERTEX_POSITION,
+    CHUNK_VERTEX_NORMAL,
+    CHUNK_VERTEX_TEXTURE_POSITION,
+    CHUNK_FACE_TYPE_GROUP,
+    CHUNK_FACE_GROUP,
+    CHUNK_FACE,
+    CHUNK_VERTEX_GROUP,
+    CHUNK_MATRIX_GROUP,
+    CHUNK_MATRIX_INDEX,
+    CHUNK_TEXTURE_VERTEX_GROUP,
+    CHUNK_TANGENTS,
+    CHUNK_SKIN
     )
 # PRE2 headOrTail values
 HEAD_OR_TAIL_HEAD = 0
@@ -243,15 +270,78 @@ TEAM_COLOR_IMAGE_PATH = 'ReplaceableTextures\\TeamColor\\TeamColor'
 TEAM_GLOW_IMAGE_PATH = 'ReplaceableTextures\\TeamGlow\\TeamGlow'
 TEAM_IMAGE_EXT = '.blp'
 
+# 材质层的 FilterMode 数值就是 MDL 关键字的顺序：
+#   A(MdxModel.cs:136-145 MdxBlendMode，注释说明它镜像引擎的 BLEND_MODE) 与
+#   runtime/MdxMaterialBuilder.cs:144-180 ApplyFilter 都写明
+#       0 None(不透明、写深度)、1 AlphaKey(=MDL 的 Transparent：alpha 测试不混合)、
+#       2 Blend(混合)、3 Add、4 AddAlpha、5 Modulate、6 Modulate2x。
+# 旧表把 1/2 写反（1:'Blend'、2:'Transparent'），于是导入时二值 alpha 的树叶/旗帜
+# 材质被当成混合材质，再导出时 FilterMode 1/2 又被互换写回 —— 语义在往返中被改掉。
 FILTER_MODES = {
     0: 'None',
-    1: 'Blend',
-    2: 'Transparent',
+    1: 'Transparent',  # AlphaKey：alpha 测试、不混合（A 用 AlphaScissor 阈值 0.5）
+    2: 'Blend',
     3: 'Additive',
     4: 'AddAlpha',
     5: 'Modulate',
     6: 'Modulate2x'
 }
+
+# 材质层标志（KGSC 之外的 MdxGeoFlags，A MdxModel.cs:147-160）。
+# 这些位以前只被读进 layer.shadingFlags 就再没人用，导致双面/不受光/无深度测试等
+# 整类语义在导入与再导出时全部丢失。
+LAYER_FLAG_UNSHADED = 0x1
+LAYER_FLAG_SPHERE_ENV_MAP = 0x2
+LAYER_FLAG_WRAP_WIDTH = 0x4
+LAYER_FLAG_WRAP_HEIGHT = 0x8
+LAYER_FLAG_TWO_SIDED = 0x10
+LAYER_FLAG_UNFOGGED = 0x20
+LAYER_FLAG_NO_DEPTH_TEST = 0x40
+LAYER_FLAG_NO_DEPTH_SET = 0x80
+LAYER_FLAG_NO_FALLBACK = 0x100
+
+# 节点标志（A MdxModel.cs:63-87 MdxNodeFlags）。位语义对两类发射器是双关的：
+# 0x8000/0x10000 对 ParticleEmitter 是 EmitterUsesMDL/EmitterUsesTGA，对
+# ParticleEmitter2 是 Unshaded/SortPrimsFarZ。
+NODE_FLAG_DONT_INHERIT_TRANSLATION = 0x1
+NODE_FLAG_DONT_INHERIT_ROTATION = 0x2
+NODE_FLAG_DONT_INHERIT_SCALING = 0x4
+NODE_FLAG_BILLBOARDED = 0x8
+NODE_FLAG_BILLBOARDED_LOCK_X = 0x10
+NODE_FLAG_BILLBOARDED_LOCK_Y = 0x20
+NODE_FLAG_BILLBOARDED_LOCK_Z = 0x40
+NODE_FLAG_CAMERA_ANCHORED = 0x80
+NODE_FLAG_BONE = 0x100
+NODE_FLAG_LIGHT = 0x200
+NODE_FLAG_EVENT_OBJECT = 0x400
+NODE_FLAG_ATTACHMENT = 0x800
+NODE_FLAG_PARTICLE_EMITTER = 0x1000
+NODE_FLAG_COLLISION_SHAPE = 0x2000
+NODE_FLAG_RIBBON_EMITTER = 0x4000
+NODE_FLAG_UNSHADED_OR_EMITTER_USES_MDL = 0x8000
+NODE_FLAG_SORT_FAR_Z_OR_EMITTER_USES_TGA = 0x10000
+NODE_FLAG_LINE_EMITTER = 0x20000
+NODE_FLAG_UNFOGGED = 0x40000
+NODE_FLAG_MODEL_SPACE = 0x80000
+NODE_FLAG_XY_QUAD = 0x100000
+# PRE2(ParticleEmitter2) 用的是另一套 5 值专用表，不是材质层的 0..6 表：
+# A(MdxLoader.cs:1329-1335) 取 FilterMode >= 5 时回退 Blend；
+# MdxModel.cs:437-445 的 MdxParticleEmitter2.BlendMode 是
+#   {0:Blend, 1:Add, 2:Modulate, 3:Modulate2x, 4:AlphaKey}；
+# C 引擎 r_mdx.h:282-287 同样是 BLEND/ADDITIVE/MODULATE/MODULATE_2X/ALPHAKEY。
+# B 端 filter_mode 必须是 War3ParticleSystemProperties 里的 7 个 MDL 名字之一
+# （没有 'AlphaKey'），而引擎的 BLEND_MODE_ALPHAKEY 与材质 FilterMode.Transparent
+# 语义一致（alpha 测试、不混合、写深度），故第 4 项映射为 'Transparent'。
+PARTICLE_EMITTER2_FILTER_MODES = {
+    0: 'Blend',
+    1: 'Additive',
+    2: 'Modulate',
+    3: 'Modulate2x',
+    4: 'Transparent'
+}
+# TEXS 的 wrap 标志位（A:568-591：WrapWidth=(WrapFlags&1)!=0、WrapHeight=(WrapFlags&2)!=0）
+TEXTURE_WRAP_FLAG_WIDTH = 0x1
+TEXTURE_WRAP_FLAG_HEIGHT = 0x2
 
 def get_team_color(teamColorIndex):
     return TEAM_COLOR_IMAGE_PATH + '{0:0>2}'.format(teamColorIndex) + TEAM_IMAGE_EXT

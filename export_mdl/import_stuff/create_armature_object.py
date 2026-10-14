@@ -10,6 +10,7 @@ from ..properties.War3NodeProperties import (NODE_TYPE_ATTACHMENT,
                                              NODE_TYPE_COLLISION_SHAPE,
                                              NODE_TYPE_EVENT,
                                              NODE_TYPE_HELPER,
+                                             set_node_flags,
                                              set_node_type)
 
 
@@ -40,6 +41,7 @@ def create_armature_object(model: War3Model, bone_size: float) -> bpy.types.Obje
         p_bone.rotation_mode = 'QUATERNION'
 
     record_node_types(model, bpy_armature)
+    record_node_flags(model, bpy_armature)
 
     return bpy_armature_object
 
@@ -73,6 +75,21 @@ def record_node_types(model: War3Model, bpy_armature: bpy.types.Armature) -> Non
             set_node_type(bone, node_type)
 
 
+def record_node_flags(model: War3Model, bpy_armature: bpy.types.Armature) -> None:
+    """把每个节点解析出来的 MdxNodeFlags 记在它的骨骼上。
+
+    骨骼（以及被降级成 helper 的骨骼）没有 Object.mdl_billboard 可用，标志位
+    只能存在骨骼自己的自定义属性里，导出端 make_bones.get_wc3_bone 再从那里读回。
+    """
+    nodes_by_name: Dict[str, War3Node] = {}
+    for node in model.id_to_object.values():
+        nodes_by_name.setdefault(node.name, node)
+    for bone in bpy_armature.bones:
+        node = nodes_by_name.get(bone.name)
+        if node is not None:
+            set_node_flags(bone, getattr(node, "flags", 0))
+
+
 def get_bpy_armature_object(name: str) -> bpy.types.Object:
     bpy_armature: bpy.types.Armature = bpy.data.armatures.new(name)
     bpy_armature_object = bpy.data.objects.new(name, bpy_armature)
@@ -97,6 +114,14 @@ def create_edit_bones(bone_size: float,
                     node.name = temp_name
                     break
         bone = edit_bones.new(node.name)
+        # Blender 会把超过 63 字节的标识符截断（UTF-8 的中文名字很容易超过，例如
+        # jn_ds_t13_1.mdx 里 39 个字符的名字有 77 字节），重名时还会自动加后缀。
+        # 于是 node.name 与真正的骨骼名对不上，set_parents 按 node.name 查不到骨骼
+        # 就抛 'NoneType' object has no attribute 'parent'。统一以 Blender 实际给出的
+        # 名字为准（顶点组、节点类型映射等下游都按 node.name 工作，保持一致）。
+        if bone.name != node.name:
+            print("   骨骼名 %r 被 Blender 改为 %r" % (node.name, bone.name))
+            node.name = bone.name
         bone_names.add(bone.name)
         bone.head = node.pivot
         bone.tail = node.pivot
@@ -106,8 +131,15 @@ def create_edit_bones(bone_size: float,
 def set_parents(war3_nodes: List[War3Node], bpy_armature: bpy.types.Armature):
     bpy.ops.object.mode_set(mode='EDIT')
     edit_bones: bpy.types.ArmatureEditBones = bpy_armature.edit_bones
+    missing_warned = False
     for war3_node in war3_nodes:
         e_bone = edit_bones.get(war3_node.name)
+        if e_bone is None:
+            # 兜底：名称对不上时不能中断整个导入，跳过这根骨骼的父子关系即可。
+            if not missing_warned:
+                print("   节点 %r 没有对应的骨骼，跳过它的父子关系" % war3_node.name)
+                missing_warned = True
+            continue
         if war3_node.parent_node is not None:
             war3_par = war3_node.parent_node
             print("connecting \"%s\" (%i) to parent \"%s\" (%i)" % (war3_node.name, war3_node.obj_id,

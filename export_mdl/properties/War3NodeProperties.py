@@ -51,6 +51,13 @@ class War3NodeProperties(bpy.types.PropertyGroup):
         update=set_bone_node_type,
         default='NONE'
         )
+    nodeFlags: bpy.props.IntProperty(
+        description="这个节点在 MDX 里的原始标志位（MdxNodeFlags）。"
+                    "导入时自动记录 Billboarded、锁轴、DontInherit*、CameraAnchored "
+                    "等信息，导出时据此还原，一般不用手动改。",
+        name='节点标志位',
+        default=0
+        )
 
     @classmethod
     def register(cls):
@@ -74,6 +81,20 @@ def set_node_type(bone, node_type: str) -> None:
     properties = getattr(bone, "warcraft_3", None)
     if properties is not None:
         properties.nodeType = node_type
+
+
+def get_node_flags(bone) -> int:
+    """骨骼上记录的 MdxNodeFlags（未记录时为 0）。"""
+    properties = getattr(bone, "warcraft_3", None)
+    if properties is None:
+        return 0
+    return int(properties.nodeFlags)
+
+
+def set_node_flags(bone, flags: int) -> None:
+    properties = getattr(bone, "warcraft_3", None)
+    if properties is not None:
+        properties.nodeFlags = int(flags)
 
 
 # Custom property marking a node *object* (an empty, light or emitter mesh) with

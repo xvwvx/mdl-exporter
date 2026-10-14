@@ -40,6 +40,8 @@ def get_particle_emitter(sequences: List[War3AnimationAction],
 
     particle_sys.billboarded = bpy_emitter.billboarded
     particle_sys.billboard_lock = bpy_emitter.billboard_lock
+    particle_sys.dont_inherit = getattr(bpy_emitter, "dont_inherit", (False, False, False))
+    particle_sys.camera_anchored = getattr(bpy_emitter, "camera_anchored", False)
 
     return particle_sys
 
@@ -74,6 +76,8 @@ def get_particle_emitter2(sequences: List[War3AnimationAction],
 
     particle_sys.billboarded = bpy_emitter.billboarded
     particle_sys.billboard_lock = bpy_emitter.billboard_lock
+    particle_sys.dont_inherit = getattr(bpy_emitter, "dont_inherit", (False, False, False))
+    particle_sys.camera_anchored = getattr(bpy_emitter, "camera_anchored", False)
 
     return particle_sys
 
@@ -108,5 +112,7 @@ def get_ribbon_emitter(sequences: List[War3AnimationAction],
 
     particle_sys.billboarded = bpy_emitter.billboarded
     particle_sys.billboard_lock = bpy_emitter.billboard_lock
+    particle_sys.dont_inherit = getattr(bpy_emitter, "dont_inherit", (False, False, False))
+    particle_sys.camera_anchored = getattr(bpy_emitter, "camera_anchored", False)
 
     return particle_sys

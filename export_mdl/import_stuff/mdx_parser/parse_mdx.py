@@ -49,59 +49,73 @@ def parse_mdx(data: bytes, import_properties: MDXImportProperties):
         r.skip(chunk_size)
         # print("Model chunkId: ", chunk_id,  "cunkSize: ", chunk_size)
 
-        if chunk_id == constants.CHUNK_VERSION:
-            model.version = parse_version(chunk_data)
-            print(" version: ", model.version)
-        elif chunk_id == constants.CHUNK_MODEL:
-            model.name = parse_model(chunk_data)
-            print(" Model name: " + model.name)
-        elif chunk_id == constants.CHUNK_GLOBAL_SEQUENCE:
-            model.global_seqs.update(parse_global_sequences(chunk_data))
-        elif chunk_id == constants.CHUNK_SEQUENCE:
-            model.sequences.extend(parse_sequences(chunk_data))
-        elif chunk_id == constants.CHUNK_TEXTURE:
-            model.textures.extend(parse_textures(chunk_data))
-        elif chunk_id == constants.CHUNK_MATERIAL:
-            model.materials.extend(parse_materials(chunk_data, model.version))
-        elif chunk_id == constants.CHUNK_TEXTURE_ANIMATIONS:
-            print(" parsing texture animations")
-            model.tvertex_anims.extend(parse_texture_animations(chunk_data))
-        elif chunk_id == constants.CHUNK_GEOSET:
-            print(" parsing geosets")
-            model.geosets.extend(parse_geosets(chunk_data, model.version, model.name))
-        elif chunk_id == constants.CHUNK_GEOSET_ANIMATION:
-            model.geoset_anims.extend(parse_geoset_animations(chunk_data))
-        elif chunk_id == constants.CHUNK_BONE:
-            model.bones.extend(parse_bones(chunk_data))
-        elif chunk_id == constants.CHUNK_HELPER:
-            model.helpers.extend(parse_helpers(chunk_data))
-        elif chunk_id == constants.CHUNK_LIGHT:
-            print(" Lights!")
-            model.lights.extend(parse_lights(chunk_data))
-        elif chunk_id == constants.CHUNK_ATTACHMENT:
-            model.attachments.extend(parse_attachments(chunk_data))
-        elif chunk_id == constants.CHUNK_EVENT_OBJECT:
-            model.event_objects.extend(parse_events(chunk_data))
-        elif chunk_id == constants.CHUNK_PARTICLE_EM:
-            print(" parsing particle emitters")
-            model.particle_systems.extend(parse_particle_emitters(chunk_data))
-        elif chunk_id == constants.CHUNK_PARTICLE_EM2:
-            print(" parsing particle emitters 2")
-            model.particle_systems2.extend(
-                parse_particle_emitters2(chunk_data, model.version))
-        elif chunk_id == constants.CHUNK_RIBBON_EM:
-            print(" parsing ribbon emitters")
-            model.particle_ribbon.extend(parse_ribbon_emitters(chunk_data))
-        elif chunk_id == constants.CHUNK_CAMERAS:
-            print(" parsing cameras")
-            model.cameras.extend(parse_cameras(chunk_data))
-        elif chunk_id == constants.CHUNK_COLLISION_SHAPE:
-            model.collision_shapes.extend(parse_collision_shapes(chunk_data))
-        elif chunk_id == constants.CHUNK_PIVOT_POINT:
-            pivot_points.extend(parse_pivot_points(chunk_data))
-            model.pivot_points.extend(pivot_points)
-        else:
-            print(" unknown or unimplemented chunkId: ", chunk_id, "cunkSize: ", chunk_size)
+        # S24：A(MdxLoader.cs:450-467) 对每个块单独 try/catch，坏块只丢自己。
+        # 旧实现没有任何容错，任何一处结构错误都会让整个模型导入中止。
+        try:
+            if chunk_id == constants.CHUNK_VERSION:
+                model.version = parse_version(chunk_data)
+                print(" version: ", model.version)
+            elif chunk_id == constants.CHUNK_MODEL:
+                model.name, model.animation_file = parse_model(chunk_data)
+                print(" Model name: " + model.name)
+            elif chunk_id == constants.CHUNK_GLOBAL_SEQUENCE:
+                model.global_seqs.update(parse_global_sequences(chunk_data))
+            elif chunk_id == constants.CHUNK_SEQUENCE:
+                model.sequences.extend(parse_sequences(chunk_data))
+            elif chunk_id == constants.CHUNK_TEXTURE:
+                model.textures.extend(parse_textures(chunk_data))
+            elif chunk_id == constants.CHUNK_MATERIAL:
+                model.materials.extend(parse_materials(chunk_data, model.version))
+            elif chunk_id == constants.CHUNK_TEXTURE_ANIMATIONS:
+                print(" parsing texture animations")
+                model.tvertex_anims.extend(parse_texture_animations(chunk_data))
+            elif chunk_id == constants.CHUNK_GEOSET:
+                print(" parsing geosets")
+                model.geosets.extend(parse_geosets(chunk_data, model.version, model.name))
+            elif chunk_id == constants.CHUNK_GEOSET_ANIMATION:
+                model.geoset_anims.extend(parse_geoset_animations(chunk_data))
+            elif chunk_id == constants.CHUNK_BONE:
+                model.bones.extend(parse_bones(chunk_data))
+            elif chunk_id == constants.CHUNK_HELPER:
+                model.helpers.extend(parse_helpers(chunk_data))
+            elif chunk_id == constants.CHUNK_LIGHT:
+                print(" Lights!")
+                model.lights.extend(parse_lights(chunk_data))
+            elif chunk_id == constants.CHUNK_ATTACHMENT:
+                model.attachments.extend(parse_attachments(chunk_data))
+            elif chunk_id == constants.CHUNK_EVENT_OBJECT:
+                model.event_objects.extend(parse_events(chunk_data))
+            elif chunk_id == constants.CHUNK_PARTICLE_EM:
+                print(" parsing particle emitters")
+                model.particle_systems.extend(parse_particle_emitters(chunk_data))
+            elif chunk_id == constants.CHUNK_PARTICLE_EM2:
+                print(" parsing particle emitters 2")
+                model.particle_systems2.extend(
+                    parse_particle_emitters2(chunk_data, model.version))
+            elif chunk_id == constants.CHUNK_RIBBON_EM:
+                print(" parsing ribbon emitters")
+                model.particle_ribbon.extend(parse_ribbon_emitters(chunk_data))
+            elif chunk_id == constants.CHUNK_CAMERAS:
+                print(" parsing cameras")
+                model.cameras.extend(parse_cameras(chunk_data))
+            elif chunk_id == constants.CHUNK_COLLISION_SHAPE:
+                model.collision_shapes.extend(parse_collision_shapes(chunk_data))
+            elif chunk_id == constants.CHUNK_PIVOT_POINT:
+                # A(MdxLoader.cs:558-566)：每个 PIVT 块都往同一个列表追加。旧实现把
+                # 累积列表整段重加，出现第二个 PIVT 块时前面的点会被重复一遍。
+                pivot_points = parse_pivot_points(chunk_data)
+                model.pivot_points.extend(pivot_points)
+            else:
+                # Not fatal: the chunk walker has already consumed the payload, so
+                # the rest of the file still parses.  It is reported loudly because a
+                # chunk that reaches here is silently missing from the imported
+                # model, which is easy to mistake for model corruption.
+                print(" 警告：跳过了未知的块 '%s'（%d 字节），该块的内容不会导入"
+                      % (chunk_id, chunk_size))
+        except Exception as error:
+            print(" 块 '%s'（%d 字节）解析失败：%s - 跳过该块继续"
+                  % (chunk_id, chunk_size, error))
+
 
     if r.offset < data_size:
         # Some packers (e.g. the "SMINAD" watermark) append a few signature

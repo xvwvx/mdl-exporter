@@ -25,6 +25,8 @@ def get_lights(sequences: List[War3AnimationAction],
 
     light.billboarded = bpy_light.billboarded
     light.billboard_lock = bpy_light.billboard_lock
+    light.dont_inherit = getattr(bpy_light, "dont_inherit", (False, False, False))
+    light.camera_anchored = getattr(bpy_light, "camera_anchored", False)
 
     # obj: bpy.types.Light = bpy_obj
     # bpy_light: bpy.types.Light = bpy_obj.data

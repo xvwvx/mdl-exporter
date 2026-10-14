@@ -8,7 +8,9 @@ def parse_pivot_points(data: bytes) -> List[List[float]]:
     r = binary_reader.Reader(data)
 
     if data_size % 12 != 0:
-        raise Exception('bad Pivot Point data (size % 12 != 0)')
+        # A(MdxLoader.cs:558-566)：只记诊断，按 count = Length/12 解析，尾部余数字节丢弃。
+        print(' PIVT: %d byte(s) is not a multiple of the 12-byte pivot record; parsing %d pivot(s)'
+              % (data_size, data_size // 12))
 
     pivot_points_count = data_size // 12
 

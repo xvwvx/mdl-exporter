@@ -16,6 +16,13 @@ def parse_collision_shapes(data: bytes) -> List[War3CollisionShape]:
         parse_node(r, node)
         collision_type = r.getf('<I')[0]
 
+        # A(MdxLoader.cs:1075-1096)：只有 0..3 是已知类型，未知类型一律按 Box 处理
+        # （并记诊断）。旧实现把未知类型当 Sphere：Sphere 只读 1 个顶点、多读一个
+        # 半径，于是后续记录整整错位 12 字节。
+        if collision_type > 3:
+            print('  未知的碰撞体类型 %d - 按 Box 处理' % collision_type)
+            collision_type = 0
+
         if collision_type == 0:
             vertices_count = 2
             node.type = 'Box'
@@ -28,11 +35,6 @@ def parse_collision_shapes(data: bytes) -> List[War3CollisionShape]:
         elif collision_type == 3:
             vertices_count = 2
             node.type = 'Cylinder'
-        else:
-            vertices_count = 1
-            node.type = 'Sphere'
-            print('UNSUPPORTED COLLISION SHAPE TYPE:', collision_type)
-            # raise Exception('UNSUPPORTED COLLISION SHAPE TYPE:', collision_type)
 
         for _ in range(vertices_count):
             position = r.getf('<3f')

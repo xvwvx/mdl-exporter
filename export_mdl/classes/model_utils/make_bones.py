@@ -10,6 +10,8 @@ from export_mdl.classes.animation_curve_utils.transform_rot import transform_rot
 from export_mdl.classes.animation_curve_utils.transform_vec import transform_vec1
 from export_mdl.classes.bpy_helpers.BpySceneObjects import BpySceneObjects
 from export_mdl.classes.model_utils.is_animated_ugg import get_loc_rot_scale, get_baked_loc_rot_scale
+from export_mdl.node_flags import set_node_flags
+from export_mdl.properties.War3NodeProperties import get_node_flags
 
 
 def parse_armatures(bpy_scene_objects: BpySceneObjects,
@@ -58,6 +60,10 @@ def get_wc3_bone(armature: bpy.types.Object, animation_data: bpy.types.AnimData,
     pivot_ = matrix_world @ Vector(pose_bone.bone.head_local)  # Armature space to world space
     pivot = global_matrix @ Vector(pivot_)  # Axis conversion
     bone = War3Bone(pose_bone.name, -1, pivot, None, bone_p_name, anim_loc, anim_rot, anim_scale, pose_bone.matrix_basis)
+    # 节点标志（Billboarded / 锁轴 / DontInherit* / CameraAnchored）在导入时被记在
+    # 骨骼的 warcraft_3.nodeFlags 上（create_armature_object.record_node_flags），
+    # 这里读回并展开成宿主字段，导出 save_bones 才能把关键字写回去。
+    set_node_flags(bone, get_node_flags(pose_bone.bone))
     return bone
 
 

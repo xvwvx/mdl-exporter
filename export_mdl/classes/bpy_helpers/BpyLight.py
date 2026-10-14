@@ -28,8 +28,15 @@ class BpyLight:
                 bb.billboard_lock_z,
                 bb.billboard_lock_y,
                 bb.billboard_lock_x)
+            self.dont_inherit: Tuple[bool, bool, bool] = (
+                bb.dont_inherit_translation,
+                bb.dont_inherit_rotation,
+                bb.dont_inherit_scaling)
+            self.camera_anchored: bool = bb.camera_anchored
         else:
             self.billboarded: bool = False
             self.billboard_lock: Tuple[bool, bool, bool] = (False, False, False)
+            self.dont_inherit: Tuple[bool, bool, bool] = (False, False, False)
+            self.camera_anchored: bool = False
         self.parent_name: Optional[str] = get_parent_name(bpy_obj)
         self.animation_data: bpy.types.AnimData = bpy_obj.animation_data

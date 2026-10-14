@@ -4,6 +4,7 @@ import bpy
 
 from export_mdl.classes.War3Attachment import War3Attachment
 from export_mdl.classes.War3Node import War3Node
+from export_mdl.import_stuff.apply_node_flags import apply_node_flags
 from export_mdl.properties.War3NodeProperties import (NODE_TYPE_ATTACHMENT,
                                                       set_object_node_type)
 
@@ -39,6 +40,7 @@ def create_bpy_attachment(bone_size: float, node: War3Attachment, node_names: Se
     bpy_object.location = node.pivot
     bpy_object.empty_display_type = 'CONE'
     bpy_object.empty_display_size = bone_size
+    apply_node_flags(bpy_object, node)
     return bpy_object
 
 

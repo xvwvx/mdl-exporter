@@ -42,6 +42,8 @@ def get_object_node(sequences: List[War3AnimationAction],
 
     node.billboarded = bpy_empty_node.billboarded
     node.billboard_lock = bpy_empty_node.billboard_lock
+    node.dont_inherit = getattr(bpy_empty_node, "dont_inherit", (False, False, False))
+    node.camera_anchored = getattr(bpy_empty_node, "camera_anchored", False)
     return node
 
 
@@ -68,6 +70,8 @@ def get_object_nod1(sequences: List[War3AnimationAction],
 
     node.billboarded = bpy_empty_node.billboarded
     node.billboard_lock = bpy_empty_node.billboard_lock
+    node.dont_inherit = getattr(bpy_empty_node, "dont_inherit", (False, False, False))
+    node.camera_anchored = getattr(bpy_empty_node, "camera_anchored", False)
     return node
 
 
@@ -113,6 +117,8 @@ def get_attachment(sequences: List[War3AnimationAction],
     att.visibility = visibility
     att.billboarded = bpy_empty_node.billboarded
     att.billboard_lock = bpy_empty_node.billboard_lock
+    att.dont_inherit = getattr(bpy_empty_node, "dont_inherit", (False, False, False))
+    att.camera_anchored = getattr(bpy_empty_node, "camera_anchored", False)
     return att
 
 
@@ -160,6 +166,8 @@ def get_helper1(sequences: List[War3AnimationAction],
 
     helper.billboarded = bpy_empty_node.billboarded
     helper.billboard_lock = bpy_empty_node.billboard_lock
+    helper.dont_inherit = getattr(bpy_empty_node, "dont_inherit", (False, False, False))
+    helper.camera_anchored = getattr(bpy_empty_node, "camera_anchored", False)
     return helper
 
 

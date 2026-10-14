@@ -17,6 +17,9 @@ def parse_geoset_animations(data: bytes):
         flags = r.getf('<I')[0]
         color = list(r.getf('<3f'))
         geoset_id = r.getf('<I')[0]
+        # A(MdxLoader.cs:1021-1022)：0xFFFFFFFF 归一为 -1（S14 同族）。
+        if geoset_id == 0xFFFFFFFF:
+            geoset_id = -1
         animation_color = None
         animation_alpha = None
         while r.offset < inclusive_size:
@@ -26,8 +29,17 @@ def parse_geoset_animations(data: bytes):
                 animation_color = parse_timeline(r, '<3f')
             elif chunk_id == constants.CHUNK_GEOSET_ALPHA:
                 animation_alpha = parse_timeline(r, '<f')
+            else:
+                # A(MdxLoader.cs:1038-1041)：未知子块只消费 tag 本身的 4 字节后继续。
+# 注意：A 对未知 tag 只消费 tag 自身的 4 字节（getid 已经消费掉了），
+                # 这里不能再额外 skip —— 旧实现多跳 4 字节，未知 tag 之后的所有读取
+                # 都整体错位（合成样本 synth_all800.mdx 的层尾填充字节即暴露此错位）。
+                print("  unknown geoset-animation sub-chunk %r - skipping 4 bytes" % chunk_id)
 
         geoset_animation = War3GeosetAnim(color, alpha, animation_color, animation_alpha)
         geoset_animation.geoset_id = geoset_id
+        # 动态属性：GEOA 头的 flags/静态 alpha（mdxdump 的 geosetAnims[].flags/staticAlpha）。
+        geoset_animation.flags = flags
+        geoset_animation.static_alpha = alpha[0] if alpha else 1.0
         geoset_animations.append(geoset_animation)
     return geoset_animations
